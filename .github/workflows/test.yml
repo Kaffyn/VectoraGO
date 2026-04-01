@@ -1,0 +1,14 @@
+# Este arquivo foi substituído por tests.yml
+# Mantido apenas para não quebrar referências externas.
+# O ci.yml usa tests.yml diretamente.
+name: Tests (deprecated)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  redirect:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "⚠️ Use tests.yml via ci.yml. Este workflow está depreciado."

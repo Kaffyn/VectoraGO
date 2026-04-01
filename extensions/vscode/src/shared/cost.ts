@@ -1,0 +1,111 @@
+import { ModelInfo, ServiceTier } from "../utils/model-utils"
+
+export interface ApiCostResult {
+	totalInputTokens: number
+	totalOutputTokens: number
+	totalCost: number
+}
+
+function applyLongContextPricing(modelInfo: ModelInfo, totalInputTokens: number, serviceTier?: ServiceTier): ModelInfo {
+	const pricing = modelInfo.longContextPricing
+	if (!pricing || totalInputTokens <= pricing.thresholdTokens) {
+		return modelInfo
+	}
+
+	const effectiveServiceTier = serviceTier ?? "default"
+	if (pricing.appliesToServiceTiers && !pricing.appliesToServiceTiers.includes(effectiveServiceTier)) {
+		return modelInfo
+	}
+
+	return {
+		...modelInfo,
+		inputPrice:
+			modelInfo.inputPrice !== undefined && pricing.inputPriceMultiplier !== undefined
+				? modelInfo.inputPrice * pricing.inputPriceMultiplier
+				: modelInfo.inputPrice,
+		outputPrice:
+			modelInfo.outputPrice !== undefined && pricing.outputPriceMultiplier !== undefined
+				? modelInfo.outputPrice * pricing.outputPriceMultiplier
+				: modelInfo.outputPrice,
+		cacheWritesPrice:
+			modelInfo.cacheWritesPrice !== undefined && pricing.cacheWritesPriceMultiplier !== undefined
+				? modelInfo.cacheWritesPrice * pricing.cacheWritesPriceMultiplier
+				: modelInfo.cacheWritesPrice,
+		cacheReadsPrice:
+			modelInfo.cacheReadsPrice !== undefined && pricing.cacheReadsPriceMultiplier !== undefined
+				? modelInfo.cacheReadsPrice * pricing.cacheReadsPriceMultiplier
+				: modelInfo.cacheReadsPrice,
+	}
+}
+
+function calculateApiCostInternal(
+	modelInfo: ModelInfo,
+	inputTokens: number,
+	outputTokens: number,
+	cacheCreationInputTokens: number,
+	cacheReadInputTokens: number,
+): ApiCostResult {
+	const cacheWritesCost = ((modelInfo.cacheWritesPrice || 0) / 1_000_000) * cacheCreationInputTokens
+	const cacheReadsCost = ((modelInfo.cacheReadsPrice || 0) / 1_000_000) * cacheReadInputTokens
+	const baseInputCost = ((modelInfo.inputPrice || 0) / 1_000_000) * inputTokens
+	const outputCost = ((modelInfo.outputPrice || 0) / 1_000_000) * outputTokens
+	const totalCost = cacheWritesCost + cacheReadsCost + baseInputCost + outputCost
+
+	return {
+		totalInputTokens: inputTokens + cacheCreationInputTokens + cacheReadInputTokens,
+		totalOutputTokens: outputTokens,
+		totalCost,
+	}
+}
+
+// For Anthropic compliant usage, the input tokens count does NOT include the
+// cached tokens.
+export function calculateApiCostAnthropic(
+	modelInfo: ModelInfo,
+	inputTokens: number,
+	outputTokens: number,
+	cacheCreationInputTokens?: number,
+	cacheReadInputTokens?: number,
+): ApiCostResult {
+	const cacheCreation = cacheCreationInputTokens || 0
+	const cacheRead = cacheReadInputTokens || 0
+	const totalInputTokens = inputTokens + cacheCreation + cacheRead
+	const effectiveModelInfo = applyLongContextPricing(modelInfo, totalInputTokens)
+
+	return calculateApiCostInternal(
+		effectiveModelInfo,
+		inputTokens,
+		outputTokens,
+		cacheCreation,
+		cacheRead,
+	)
+}
+
+// For OpenAI compliant usage, the input tokens count INCLUDES the cached tokens.
+export function calculateApiCostOpenAI(
+	modelInfo: ModelInfo,
+	inputTokens: number,
+	outputTokens: number,
+	cacheCreationInputTokens?: number,
+	cacheReadInputTokens?: number,
+	serviceTier?: ServiceTier,
+): ApiCostResult {
+	const cacheCreation = cacheCreationInputTokens || 0
+	const cacheRead = cacheReadInputTokens || 0
+	const effectiveModelInfo = applyLongContextPricing(modelInfo, inputTokens, serviceTier)
+
+	// For OpenAI: inputTokens ALREADY includes all tokens (cached + non-cached)
+	// We need to extract the base (non-cached) tokens for the internal calculation
+	const baseInputTokens = Math.max(0, inputTokens - cacheCreation - cacheRead)
+
+	return calculateApiCostInternal(
+		effectiveModelInfo,
+		baseInputTokens,
+		outputTokens,
+		cacheCreation,
+		cacheRead,
+	)
+}
+
+export const parseApiPrice = (price: string | number | undefined) =>
+	price ? (typeof price === "string" ? parseFloat(price) : price) * 1_000_000 : undefined

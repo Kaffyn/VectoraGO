@@ -1,0 +1,47 @@
+name: Copilot Setup Steps
+
+# This workflow runs before GitHub Copilot cloud agent starts.
+# It installs the Vectora Core binary so the MCP server can be used by Copilot.
+# Docs: https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/extend-cloud-agent-with-mcp
+
+on:
+  workflow_call:
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      - name: Build Vectora Core (Linux amd64)
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+            go build -ldflags="-s -w" -o /usr/local/bin/vectora ./cmd/core
+          chmod +x /usr/local/bin/vectora
+          vectora --version || echo "Vectora installed"
+
+      - name: Configure Vectora environment
+        env:
+          GEMINI_API_KEY: ${{ secrets.COPILOT_MCP_GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.COPILOT_MCP_OPENROUTER_API_KEY }}
+          VOYAGE_API_KEY: ${{ secrets.COPILOT_MCP_VOYAGE_API_KEY }}
+        run: |
+          # Linux path: ~/.Vectora/.env (see core/infra/config.go)
+          mkdir -p "$HOME/.Vectora"
+          cat > "$HOME/.Vectora/.env" <<EOF
+          GEMINI_API_KEY="${GEMINI_API_KEY}"
+          OPENROUTER_API_KEY="${OPENROUTER_API_KEY}"
+          VOYAGE_API_KEY="${VOYAGE_API_KEY}"
+          DEFAULT_MODEL="gemma-4-31b"
+          ACTIVE_GATEWAY=""
+          DEFAULT_PROVIDER="gemini"
+          DEFAULT_EMBEDDING_MODEL="gemini-embedding-2-preview"
+          EOF
+          echo "Vectora config written to $HOME/.Vectora/.env"
