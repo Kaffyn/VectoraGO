@@ -52,14 +52,18 @@ O Vectora integra tudo isso em um único core local, pronto para uso.
 O Vectora foi construído com flexibilidade em mente, oferecendo duas formas distintas de alimentar sua IA:
 
 ### 1. Local-First & Grátis (Traga suas Chaves)
+
 Rode tudo diretamente na sua máquina local.
+
 - **Custo:** 100% Grátis (core Open Source).
 - **Privacidade:** Seus vetores e metadados nunca saem do seu disco.
 - **Requisitos:** Você fornece suas próprias chaves de API (Gemini, Anthropic, OpenAI, etc.).
 - **Ideal para:** Desenvolvedores, usuários avançados e ambientes isolados (air-gapped).
 
 ### 2. Serviço Vetorial Gerenciado (Pago + Créditos)
+
 Conecte-se ao serviço em nuvem da Kaffyn para uma experiência sem fricção.
+
 - **Custo:** Assinatura paga ou créditos pré-pagos.
 - **Conveniência:** Não há necessidade de gerenciar suas próprias chaves ou cotas.
 - **Pronto para o Futuro:** Habilita recursos avançados como o futuro aplicativo **Vectora Mobile**.

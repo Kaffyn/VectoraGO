@@ -1116,12 +1116,8 @@ let chatPanel: ChatPanel;
 
 export async function activate(context: vscode.ExtensionContext) {
   // Initialize client (daemon ou Service remoto)
-  const daemonPath = vscode.workspace
-    .getConfiguration("vectora")
-    .get<string>("daemonPath", "vectora");
-  const serviceUrl = vscode.workspace
-    .getConfiguration("vectora")
-    .get<string>("serviceUrl");
+  const daemonPath = vscode.workspace.getConfiguration("vectora").get<string>("daemonPath", "vectora");
+  const serviceUrl = vscode.workspace.getConfiguration("vectora").get<string>("serviceUrl");
 
   client = new VectoraClient(daemonPath, serviceUrl);
 
@@ -1153,10 +1149,7 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.window.registerTreeDataProvider("vectoraMemory", memoryProvider);
 
   // Status bar
-  const statusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Right,
-    100,
-  );
+  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.text = "$(robot) Vectora: Ready";
   statusBarItem.show();
 
@@ -1191,15 +1184,10 @@ export class ChatPanel {
   constructor(extensionUri: vscode.Uri, client: VectoraClient) {
     this.client = client;
 
-    this.panel = vscode.window.createWebviewPanel(
-      "vectoraChat",
-      "Vectora Chat",
-      vscode.ViewColumn.Beside,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-      },
-    );
+    this.panel = vscode.window.createWebviewPanel("vectoraChat", "Vectora Chat", vscode.ViewColumn.Beside, {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+    });
 
     this.panel.webview.html = this.getHTML();
 
@@ -1812,8 +1800,7 @@ cases:
             return data, nil
         }
     expected:
-      tool_calls:
-        ["analyze_code_patterns", "refactor_with_context", "write_file"]
+      tool_calls: ["analyze_code_patterns", "refactor_with_context", "write_file"]
       quality_score: 0.9 # LLM evaluates if refactoring is good
       contains_patterns: ["fmt.Errorf", "wrapping"]
 
