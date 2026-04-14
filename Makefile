@@ -1,169 +1,128 @@
-.PHONY: test-local test-cli test-integration test-acp test-features test-coverage test-verbose test-clean help
+# Vectora Unified Makefile
+# Unifies build.ps1 logic and existing test suite
 
-# Colors for output
-GREEN := \033[0;32m
+# Project variables
+BINARY_NAME := vectora
+VERSION := 0.1.0
+BIN_DIR := bin
+CMD_PATH := ./cmd/core
+STORAGE_PATH := $(shell pwd)/internal/storage/db
+
+# Go settings
+GO := go
+GO_FLAGS := -s -w
+MOD_FLAG := $(shell if [ -d "vendor" ]; then echo "-mod=vendor"; fi)
+
+# Colors
+GREEN  := \033[0;32m
 YELLOW := \033[0;33m
-RED := \033[0;31m
-NC := \033[0m # No Color
+RED    := \033[0;31m
+NC     := \033[0m
+
+# Detect OS and Arch
+OS := $(shell go env GOOS)
+ARCH := $(shell go env GOARCH)
+
+# CGO settings
+export CGO_ENABLED := 1
+export CGO_CFLAGS := -I$(STORAGE_PATH)
+
+.PHONY: all build clean test help windows linux darwin k8s hash release
 
 help:
-	@echo "$(GREEN)Vectora Test Suite$(NC)"
-	@echo "===================="
+	@echo "$(GREEN)Vectora Build & Test System$(NC)"
+	@echo "============================"
+	@echo "$(YELLOW)Build Commands:$(NC)"
+	@echo "  make build          - Build for host platform ($(OS)/$(ARCH))"
+	@echo "  make windows        - Build for Windows (amd64)"
+	@echo "  make linux          - Build for Linux (amd64)"
+	@echo "  make darwin         - Build for macOS (amd64)"
+	@echo "  make k8s            - Build static binary for Kubernetes"
+	@echo "  make clean          - Remove build artifacts"
 	@echo ""
-	@echo "$(YELLOW)Available commands:$(NC)"
-	@echo "  make test-local       - Run complete test suite locally"
-	@echo "  make test-cli         - Run only CLI tests"
-	@echo "  make test-integration - Run only integration tests"
-	@echo "  make test-acp         - Run only ACP protocol tests"
-	@echo "  make test-features    - Run only feature tests"
-	@echo "  make test-coverage    - Run tests with coverage report"
-	@echo "  make test-verbose     - Run tests with verbose output"
-	@echo "  make test-clean       - Clean test artifacts"
-	@echo "  make test-watch       - Run tests in watch mode"
-	@echo "  make test-report      - Generate HTML report"
+	@echo "$(YELLOW)Test Commands:$(NC)"
+	@echo "  make test           - Run all tests"
+	@echo "  make test-local      - Run local test suite"
+	@echo "  make test-coverage   - Generate coverage report"
 	@echo ""
-	@echo "$(YELLOW)Configuration:$(NC)"
-	@echo "  See .testenv for test configuration"
-	@echo ""
+	@echo "$(YELLOW)Release Commands:$(NC)"
+	@echo "  make release        - Build all platforms and package"
+	@echo "  make hash           - Generate build hashes"
 
-# Main test target - runs complete suite locally
-test-local:
-	@echo "$(GREEN)Starting Vectora Local Test Suite...$(NC)"
-	@echo ""
-	@cd tests && go run .
+all: clean build test
 
-# Run only CLI tests
-test-cli:
-	@echo "$(GREEN)Running CLI Tests Only...$(NC)"
-	@echo ""
-	@cd tests && go run . -test cli
+# --- Build Targets ---
 
-# Run only integration tests
-test-integration:
-	@echo "$(GREEN)Running Integration Tests Only...$(NC)"
-	@echo ""
-	@cd tests && go run . -test integration
+build: pre-build build-host post-build
 
-# Run only ACP tests
-test-acp:
-	@echo "$(GREEN)Running ACP Protocol Tests Only...$(NC)"
-	@echo ""
-	@cd tests && go run . -test acp
+pre-build:
+	@echo "$(YELLOW)[PRE-CHECK] Stopping active Vectora processes...$(NC)"
+	@pkill -f $(BINARY_NAME) || true
+	@mkdir -p $(BIN_DIR)
 
-# Run only feature tests
-test-features:
-	@echo "$(GREEN)Running Feature Tests Only...$(NC)"
-	@echo ""
-	@cd tests && go run . -test features
+build-host:
+	@echo "$(YELLOW)[PHASE 1] Compiling for host ($(OS)/$(ARCH))...$(NC)"
+	$(GO) build $(MOD_FLAG) -ldflags="$(GO_FLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) $(CMD_PATH)
+	@echo "$(GREEN)OK$(NC) - Produced $(BIN_DIR)/$(BINARY_NAME)"
 
-# Run with coverage
-test-coverage:
-	@echo "$(GREEN)Running tests with coverage...$(NC)"
-	@echo ""
-	@go test -cover -coverprofile=coverage.out -covermode=atomic ./...
-	@go tool cover -html=coverage.out -o tests/reports/coverage.html
-	@echo "$(GREEN)Coverage report saved to tests/reports/coverage.html$(NC)"
+windows: pre-build
+	@echo "$(YELLOW)[PHASE 1] Compiling for Windows (amd64)...$(NC)"
+	GOOS=windows GOARCH=amd64 $(GO) build $(MOD_FLAG) -ldflags="$(GO_FLAGS)" -o $(BIN_DIR)/$(BINARY_NAME)-windows-amd64.exe $(CMD_PATH)
+	@echo "$(GREEN)OK$(NC) - Produced $(BIN_DIR)/$(BINARY_NAME)-windows-amd64.exe"
 
-# Run with verbose output
-test-verbose:
-	@echo "$(GREEN)Running tests with verbose output...$(NC)"
-	@echo ""
-	@cd tests && go run . -verbose
+linux: pre-build
+	@echo "$(YELLOW)[PHASE 1] Compiling for Linux (amd64)...$(NC)"
+	GOOS=linux GOARCH=amd64 $(GO) build $(MOD_FLAG) -ldflags="$(GO_FLAGS)" -o $(BIN_DIR)/$(BINARY_NAME)-linux-amd64 $(CMD_PATH)
+	@echo "$(GREEN)OK$(NC) - Produced $(BIN_DIR)/$(BINARY_NAME)-linux-amd64"
 
-# Clean test artifacts
-test-clean:
-	@echo "$(YELLOW)Cleaning test artifacts...$(NC)"
-	@rm -rf /tmp/vectora-test-*
-	@rm -f coverage.out coverage.html
-	@rm -f tests/reports/*.json tests/reports/*.txt tests/reports/*.html
+darwin: pre-build
+	@echo "$(YELLOW)[PHASE 1] Compiling for macOS (amd64)...$(NC)"
+	GOOS=darwin GOARCH=amd64 $(GO) build $(MOD_FLAG) -ldflags="$(GO_FLAGS)" -o $(BIN_DIR)/$(BINARY_NAME)-darwin-amd64 $(CMD_PATH)
+	@echo "$(GREEN)OK$(NC) - Produced $(BIN_DIR)/$(BINARY_NAME)-darwin-amd64"
+
+k8s: pre-build
+	@echo "$(YELLOW)[K8S] Building static binary for Linux...$(NC)"
+	GOOS=linux GOARCH=amd64 $(GO) build $(MOD_FLAG) -ldflags="$(GO_FLAGS) -extldflags '-static'" -o $(BIN_DIR)/$(BINARY_NAME)-static $(CMD_PATH)
+	@echo "$(GREEN)OK$(NC) - Produced $(BIN_DIR)/$(BINARY_NAME)-static"
+
+post-build:
+	@cp $(BIN_DIR)/$(BINARY_NAME)* $(BIN_DIR)/$(BINARY_NAME) 2>/dev/null || true
+
+# --- Tooling Targets ---
+
+clean:
+	@echo "$(YELLOW)[CLEAN] Removing bin/ and go.sum artifacts...$(NC)"
+	rm -rf $(BIN_DIR)
+	rm -f coverage.out coverage.html
 	@echo "$(GREEN)Cleanup complete$(NC)"
 
-# Watch mode - rerun tests on file changes
-test-watch:
-	@echo "$(GREEN)Running tests in watch mode...$(NC)"
-	@echo "Watching for changes..."
-	@while true; do \
-		clear; \
-		cd tests && go run . || true; \
-		echo ""; \
-		echo "$(YELLOW)Waiting for changes... (press Ctrl+C to exit)$(NC)"; \
-		sleep 2; \
-	done
+vendor:
+	@echo "$(YELLOW)[VENDOR] Updating dependencies...$(NC)"
+	$(GO) mod tidy
+	$(GO) mod vendor
+	@echo "$(GREEN)Vendoring complete$(NC)"
 
-# Generate HTML test report
-test-report:
-	@echo "$(GREEN)Generating test report...$(NC)"
-	@cd tests && go run . > /tmp/test-output.txt 2>&1
-	@python3 tests/generate_report.py /tmp/test-output.txt tests/reports/report.html || \
-	echo "$(YELLOW)HTML generation requires Python, skipping...$(NC)"
-	@echo "$(GREEN)Reports available in tests/reports/$(NC)"
+hash:
+	@echo "$(YELLOW)[HASH] Generating SHA256 hashes...$(NC)"
+	@find $(BIN_DIR) -type f -exec sha256sum {} + > $(BIN_DIR)/checksums.txt
+	@cat $(BIN_DIR)/checksums.txt
 
-# Run quick sanity check
-test-quick:
-	@echo "$(GREEN)Running quick sanity check...$(NC)"
-	@cd tests && timeout 30 go run . 2>&1 | head -50 || echo "$(RED)Tests failed$(NC)"
+# --- Test Targets (ported from old Makefile) ---
 
-# Run specific test by name
-test-run:
-	@echo "$(GREEN)Running specific test...$(NC)"
-	@cd tests && go run . -run $(FILTER)
+test:
+	@cd tests && $(GO) run .
 
-# Benchmark tests
-test-bench:
-	@echo "$(GREEN)Running performance benchmarks...$(NC)"
-	@go test -bench=. -benchmem -benchtime=3s ./... 2>/dev/null || echo "$(YELLOW)No benchmarks found$(NC)"
+test-local: test
 
-# Check test dependencies
-test-deps:
-	@echo "$(GREEN)Checking test dependencies...$(NC)"
-	@go mod verify
-	@echo "$(GREEN)All dependencies verified$(NC)"
+test-coverage:
+	@$(GO) test -cover -coverprofile=coverage.out -covermode=atomic ./...
+	@$(GO) tool cover -html=coverage.out -o $(BIN_DIR)/coverage.html
+	@echo "$(GREEN)Coverage report saved to $(BIN_DIR)/coverage.html$(NC)"
 
-# Lint test files
-test-lint:
-	@echo "$(GREEN)Linting test files...$(NC)"
-	@cd tests && go vet ./... 2>/dev/null || echo "$(YELLOW)Linting complete$(NC)"
+# --- Release Packaging ---
 
-# Format test files
-test-fmt:
-	@echo "$(GREEN)Formatting test files...$(NC)"
-	@cd tests && go fmt ./...
-	@echo "$(GREEN)Formatting complete$(NC)"
-
-# Run all checks (lint, fmt, test)
-test-all: test-lint test-fmt test-coverage test-report
-	@echo "$(GREEN)All checks passed!$(NC)"
-
-# Initialize test environment
-test-init:
-	@echo "$(GREEN)Initializing test environment...$(NC)"
-	@mkdir -p tests/reports tests/fixtures
-	@mkdir -p /tmp/vectora-test-workspace
-	@echo "$(GREEN)Test environment ready$(NC)"
-
-# Show test statistics
-test-stats:
-	@echo "$(GREEN)Test Statistics$(NC)"
-	@echo "================"
-	@find tests -name "*.go" -type f | wc -l | xargs echo "Test files:"
-	@find tests -name "*_test.go" -type f -o -name "test_*.go" -type f | wc -l | xargs echo "Test cases:"
-	@wc -l tests/*.go | tail -1 | awk '{print "Total lines: " $$1}'
-
-# View latest test report
-test-view:
-	@if [ -f "tests/reports/timing.txt" ]; then \
-		cat tests/reports/timing.txt; \
-	else \
-		echo "$(YELLOW)No test reports found. Run 'make test-local' first.$(NC)"; \
-	fi
-
-# Docker test environment
-test-docker:
-	@echo "$(GREEN)Building Docker test environment...$(NC)"
-	@docker build -t vectora-test -f tests/Dockerfile . 2>/dev/null || echo "$(YELLOW)Docker not available$(NC)"
-
-# CI/CD compatible test run
-test-ci:
-	@echo "$(GREEN)Running CI/CD tests...$(NC)"
-	@cd tests && go run . > test-results.json 2>&1
-	@echo "$(GREEN)Results saved to test-results.json$(NC)"
+release: clean windows linux darwin hash
+	@echo "$(YELLOW)[RELEASE] Packaging binaries...$(NC)"
+	@cd $(BIN_DIR) && tar -czf $(BINARY_NAME)-linux-amd64.tar.gz $(BINARY_NAME)-linux-amd64
+	@cd $(BIN_DIR) && zip -q $(BINARY_NAME)-windows-amd64.zip $(BINARY_NAME)-windows-amd64.exe
+	@echo "$(GREEN)Release packages ready in $(BIN_DIR)/$(NC)"
