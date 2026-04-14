@@ -2,7 +2,6 @@ package quant
 
 import (
 	"fmt"
-	"math"
 )
 
 // Quantizer define a interface para algoritmos de compressão de vetores

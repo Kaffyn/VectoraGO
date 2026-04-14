@@ -1,8 +1,6 @@
 package quant
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
 	"math/rand"
 )
 

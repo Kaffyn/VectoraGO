@@ -2,7 +2,6 @@ package quant
 
 import (
 	"math"
-	"math/rand"
 )
 
 // PolarQuant implementa extração de ângulos em coordenadas polares
