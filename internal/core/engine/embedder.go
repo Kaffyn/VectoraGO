@@ -290,9 +290,31 @@ func RunEmbedJob(ctx context.Context, cfg EmbedJobConfig, kvStore db.KVStore, st
 	totalErrors := 0
 	startTime := time.Now()
 
+	// Worker pool for parallel embedding
+	const numWorkers = 4
+	workQueue := make(chan embeddingWorkItem, 16) // buffered channel
+	resultQueue := make(chan embeddingResult, 16)
+	var wg sync.WaitGroup
+
+	// Start worker pool
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go embedWorker(ctx, w, workQueue, resultQueue, &wg, cfg.CollectionName, absPath, storage, provider)
+	}
+
+	// Process results concurrently
+	var resultWg sync.WaitGroup
+	resultWg.Add(1)
+	go func() {
+		defer resultWg.Done()
+		processEmbeddingResults(ctx, resultQueue, kvStore, &totalEmbedded, &totalChunks, &totalErrors, startTime, onProgress, len(filesToEmbed))
+	}()
+
+	// Fan-out: send files to worker pool
 	for i, filePath := range filesToEmbed {
 		select {
 		case <-ctx.Done():
+			close(workQueue)
 			onProgress(EmbedProgress{IsComplete: true, HasError: true, ErrorMsg: "context canceled"})
 			return
 		default:
@@ -304,7 +326,6 @@ func RunEmbedJob(ctx context.Context, cfg EmbedJobConfig, kvStore db.KVStore, st
 			displayPath = "..." + displayPath[len(displayPath)-37:]
 		}
 
-		// Emit "Started file" progress
 		onProgress(EmbedProgress{
 			CurrentIdx:      i,
 			TotalFiles:      len(filesToEmbed),
@@ -326,78 +347,30 @@ func RunEmbedJob(ctx context.Context, cfg EmbedJobConfig, kvStore db.KVStore, st
 		}
 
 		chunks := chunkContent(string(content), 800, 100)
-		fileChunks := 0
+		language := detectLanguage(filePath)
 
-		language := "text"
-		ext := strings.ToLower(filepath.Ext(filePath))
-		switch ext {
-		case ".go":
-			language = "go"
-		case ".py":
-			language = "python"
-		case ".js", ".ts":
-			language = "javascript"
-		case ".md":
-			language = "markdown"
-		}
-
-		embedErr := false
-		var lastEmbedError string
-		for j, chunk := range chunks {
-			vec, err := provider.Embed(ctx, chunk, "")
-			if err != nil {
-				totalErrors++
-				embedErr = true
-				lastEmbedError = fmt.Sprintf("embed error: %v", err)
-				break
-			}
-
-			docID := fmt.Sprintf("%s:%d", relPath, j)
-			err = storage.UpsertChunk(ctx, cfg.CollectionName, db.Chunk{
-				ID:       docID,
-				Content:  chunk,
-				Metadata: map[string]string{"source": relPath, "filename": filepath.Base(filePath), "language": language},
-				Vector:   vec,
-			})
-			if err != nil {
-				totalErrors++
-				embedErr = true
-				lastEmbedError = fmt.Sprintf("store error: %v", err)
-				break
-			}
-			fileChunks++
-		}
-
-		if embedErr {
-			onProgress(EmbedProgress{
-				CurrentIdx: i, TotalFiles: len(filesToEmbed), DisplayPath: displayPath,
-				ElapsedSeconds: time.Since(startTime).Seconds(), CurrentFilePath: relPath,
-				HasError: true, ErrorMsg: lastEmbedError, FileChunks: fileChunks,
-				TotalEmbedded: totalEmbedded, TotalChunks: totalChunks, TotalErrors: totalErrors,
-			})
-		} else {
-			if fileChunks > 0 {
-				contentHash := db.CalculateHash(string(content))
-				entry := db.FileIndexEntry{
-					AbsolutePath: filePath,
-					ContentHash:  contentHash,
-					SizeBytes:    int64(len(content)),
-				}
-				entryBytes, _ := json.Marshal(entry)
-				kvStore.Set(ctx, "file_index", relPath, entryBytes)
-
-				totalEmbedded++
-				totalChunks += fileChunks
-			}
-
-			onProgress(EmbedProgress{
-				CurrentIdx: i, TotalFiles: len(filesToEmbed), DisplayPath: displayPath,
-				ElapsedSeconds: time.Since(startTime).Seconds(), CurrentFilePath: relPath,
-				HasError: false, FileChunks: fileChunks,
-				TotalEmbedded: totalEmbedded, TotalChunks: totalChunks, TotalErrors: totalErrors,
-			})
+		// Send work item to queue
+		workQueue <- embeddingWorkItem{
+			filePath:    filePath,
+			relPath:     relPath,
+			displayPath: displayPath,
+			content:     string(content),
+			chunks:      chunks,
+			language:    language,
+			fileIdx:     i,
+			totalFiles:  len(filesToEmbed),
 		}
 	}
+
+	// Signal workers that no more work
+	close(workQueue)
+
+	// Wait for all workers to finish
+	wg.Wait()
+
+	// Close result queue and wait for result processor
+	close(resultQueue)
+	resultWg.Wait()
 
 	infra.NotifyOS("Vectora Indexing", fmt.Sprintf("Completed indexing. %d files embedded.", totalEmbedded))
 
@@ -411,6 +384,145 @@ func RunEmbedJob(ctx context.Context, cfg EmbedJobConfig, kvStore db.KVStore, st
 		TotalErrors:    totalErrors,
 		ElapsedSeconds: time.Since(startTime).Seconds(),
 	})
+}
+
+// Worker pool types and functions
+
+type embeddingWorkItem struct {
+	filePath    string
+	relPath     string
+	displayPath string
+	content     string
+	chunks      []string
+	language    string
+	fileIdx     int
+	totalFiles  int
+}
+
+type embeddingResult struct {
+	filePath    string
+	relPath     string
+	displayPath string
+	fileIdx     int
+	totalFiles  int
+	content     string
+	fileChunks  int
+	hasError    bool
+	errorMsg    string
+	startTime   time.Time
+}
+
+// embedWorker processes files from work queue and sends results to result queue
+func embedWorker(ctx context.Context, workerID int, workQueue chan embeddingWorkItem, resultQueue chan embeddingResult, wg *sync.WaitGroup, collectionName string, absPath string, storage db.VectorStore, provider llm.Provider) {
+	defer wg.Done()
+
+	for item := range workQueue {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		fileChunks := 0
+		hasError := false
+		var errorMsg string
+
+		// Process chunks sequentially per file, but files are parallel across workers
+		for j, chunk := range item.chunks {
+			vec, err := provider.Embed(ctx, chunk, "")
+			if err != nil {
+				hasError = true
+				errorMsg = fmt.Sprintf("embed error: %v", err)
+				break
+			}
+
+			docID := fmt.Sprintf("%s:%d", item.relPath, j)
+			err = storage.UpsertChunk(ctx, collectionName, db.Chunk{
+				ID:       docID,
+				Content:  chunk,
+				Metadata: map[string]string{"source": item.relPath, "filename": filepath.Base(item.filePath), "language": item.language},
+				Vector:   vec,
+			})
+			if err != nil {
+				hasError = true
+				errorMsg = fmt.Sprintf("store error: %v", err)
+				break
+			}
+			fileChunks++
+		}
+
+		resultQueue <- embeddingResult{
+			filePath:    item.filePath,
+			relPath:     item.relPath,
+			displayPath: item.displayPath,
+			fileIdx:     item.fileIdx,
+			totalFiles:  item.totalFiles,
+			content:     item.content,
+			fileChunks:  fileChunks,
+			hasError:    hasError,
+			errorMsg:    errorMsg,
+			startTime:   time.Now(),
+		}
+	}
+}
+
+// processEmbeddingResults aggregates results from workers and updates progress
+func processEmbeddingResults(ctx context.Context, resultQueue chan embeddingResult, kvStore db.KVStore, totalEmbedded *int, totalChunks *int, totalErrors *int, startTime time.Time, onProgress func(EmbedProgress), totalFiles int) {
+	for result := range resultQueue {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		if result.hasError {
+			*totalErrors++
+			onProgress(EmbedProgress{
+				CurrentIdx: result.fileIdx, TotalFiles: totalFiles, DisplayPath: result.displayPath,
+				ElapsedSeconds: time.Since(startTime).Seconds(), CurrentFilePath: result.relPath,
+				HasError: true, ErrorMsg: result.errorMsg, FileChunks: result.fileChunks,
+				TotalEmbedded: *totalEmbedded, TotalChunks: *totalChunks, TotalErrors: *totalErrors,
+			})
+		} else {
+			if result.fileChunks > 0 {
+				contentHash := db.CalculateHash(result.content)
+				entry := db.FileIndexEntry{
+					AbsolutePath: result.filePath,
+					ContentHash:  contentHash,
+					SizeBytes:    int64(len(result.content)),
+				}
+				entryBytes, _ := json.Marshal(entry)
+				kvStore.Set(ctx, "file_index", result.relPath, entryBytes)
+
+				*totalEmbedded++
+				*totalChunks += result.fileChunks
+			}
+
+			onProgress(EmbedProgress{
+				CurrentIdx: result.fileIdx, TotalFiles: totalFiles, DisplayPath: result.displayPath,
+				ElapsedSeconds: time.Since(startTime).Seconds(), CurrentFilePath: result.relPath,
+				HasError: false, FileChunks: result.fileChunks,
+				TotalEmbedded: *totalEmbedded, TotalChunks: *totalChunks, TotalErrors: *totalErrors,
+			})
+		}
+	}
+}
+
+// detectLanguage determines file language from extension
+func detectLanguage(filePath string) string {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	switch ext {
+	case ".go":
+		return "go"
+	case ".py":
+		return "python"
+	case ".js", ".ts":
+		return "javascript"
+	case ".md":
+		return "markdown"
+	default:
+		return "text"
+	}
 }
 
 // Retain local chunk definition since chunking is local per file.
