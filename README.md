@@ -23,11 +23,13 @@ Result: answers based on how the system actually works — not just on isolated 
 
 ---
 
-- **Hybrid RAG (Core):** Semantic + structural + relational retrieval
+- **Hybrid RAG (Core):** Semantic + structural + relational retrieval with **USearch (HNSW)**
 - **Codebase-Aware:** Understands real relationships between modules and files
 - **Real Multi-hop:** Navigates multiple points in the system to answer complex questions
 - **Agentic Execution:** Acts on code with context and safety
+- **TurboQuant (Beta):** Extreme vector compression for memory efficiency
 - **Total Privacy:** Data and embeddings stay local
+- **Flexible Hosting:** Run locally for free (BYO Keys) or as a managed Service (AI Credits)
 
 ---
 
@@ -35,12 +37,33 @@ Result: answers based on how the system actually works — not just on isolated 
 
 Most solutions require combining multiple tools:
 
-- vector database
+- vector database (**USearch**)
 - RAG framework
 - embeddings
 - orchestration
+- compression (**TurboQuant**)
 
 Vectora integrates all of this into a single local core, ready for use.
+
+---
+
+## 🚀 Two Modes of Operation
+
+Vectora is built with flexibility in mind, offering two distinct ways to power your AI:
+
+### 1. Local-First & Free (BYO Keys)
+Run everything directly on your local machine.
+- **Cost:** 100% Free (Open Source core).
+- **Privacy:** Your vectors and metadata never leave your drive.
+- **Requirements:** You provide your own API keys (Gemini, Anthropic, OpenAI, etc.).
+- **Best for:** Developers, power users, and air-gapped environments.
+
+### 2. Managed Vector Service (Paid + Credits)
+Connect to the Kaffyn cloud service for a seamless experience.
+- **Cost:** Paid subscription or pay-as-you-go credits.
+- **Convenience:** No need to manage your own API keys or quotas.
+- **Future-Proof:** Enables advanced features like the upcoming **Vectora Mobile** application.
+- **Best for:** Teams, non-technical users, and multi-device synchronization.
 
 ---
 
@@ -244,13 +267,13 @@ MIT
 - **Language:** Go 1.23+ (Golang)
 - **Architecture:** Singleton Daemon with Multi-Tenancy Protocol (MTP)
 - **Interface:** **Cobra CLI** (Terminal) & **Systray** (Desktop)
-- **Vector DB:** **chromem-go** (Local-first RAG engine)
+- **Vector DB:** **USearch (HNSW)** (Industrial-grade local RAG engine)
 - **Metadata Store:** **BBolt** (ACID persistence for history and logs)
 - **Models (Default):** Gemini 3.1 Pro (Reasoning) & Gemini Embedding 2 (RAG)
 - **Protocols:** ACP (Agent Client Protocol) & MCP (Model Context Protocol)
 - **Inter-Process Communication (IPC):** JSON-RPC 2.0 over Named Pipes (Windows) or Unix Sockets (POSIX)
 - **Local Inference:** **llama.cpp** integration (Qwen 3.6)
-- **Optimization:** TurboQuant (KV-Cache Compression)
+- **Optimization:** **TurboQuant (Beta)** (KV-Cache and Vector Compression)
 
 ---
 
@@ -309,13 +332,13 @@ Unlike purely chat models, Vectora has real tools to interact with your system (
 - **Files:** Read, write, list, and edit (read, write, ls, edit).
 - **IDE Git Support:** Vectora operates in harmony with the user's Git environment, allowing the IDE's integrated version control to manage history and snapshots.
 - **Terminal:** Shell command execution with real-time output capture.
-- **Knowledge Search:** Deep semantic search in your local workspaces using chromem-go.
+- **Knowledge Search:** Deep semantic search in your local workspaces using **USearch**.
 
 ## Core Architecture
 
 | Component           | Technology             | Role                                                                       |
 | ------------------- | ---------------------- | -------------------------------------------------------------------------- |
-| **Vector DB**       | **chromem-go**         | Semantic search and embeddings                                             |
+| **Vector DB**       | **USearch (HNSW)**     | Semantic search and embeddings                                             |
 | **Key-Value DB**    | **bbolt**              | Chat history, logs, configuration                                          |
 | **IA Motor**        | **Direct Calls**       | Optimized HTTP/STDIO calls to APIs and `llama.cpp`. No framework overhead. |
 | **Local Inference** | **llama.cpp (native)** | Offline model execution (Qwen3) via native system integration              |
@@ -342,11 +365,11 @@ Vectora Core is the foundation of a larger ecosystem focused on hybrid RAG and A
 - Complete offline execution (including embeddings)
 - Support for **Qwen 3.5** and **Qwen 3.6** models
 
-**TurboQuant (Extreme Efficiency):**
+**TurboQuant (Beta):**
 
-- Extreme KV Cache compression (3 to 3.5 bits per value)
+- Extreme KV Cache and Vector compression (1-bit / Hamming search)
 - Processing of massive contexts (128k to 1M tokens) 100% locally
-- Near-zero accuracy loss with PolarQuant and QJL Corrector technology
+- Near-zero accuracy loss with Orthogonal Rotation and QJL Stabilization technology
 
 **Recovery Engine Evolution:**
 
