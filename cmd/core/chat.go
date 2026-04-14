@@ -12,6 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	chatModel string
+)
+
 var chatCmd = &cobra.Command{
 	Use:   "chat",
 	Short: "Start a rich TUI chat with Vectora",
@@ -36,6 +40,7 @@ var chatCmd = &cobra.Command{
 				"workspace_id":    conversationID,
 				"query":           input,
 				"conversation_id": conversationID,
+				"model":           chatModel, // Pass selected model
 			}
 
 			var resp struct {
@@ -60,4 +65,8 @@ var chatCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func init() {
+	chatCmd.Flags().StringVarP(&chatModel, "model", "m", "", "AI model to use (gemini, claude, openai)")
 }

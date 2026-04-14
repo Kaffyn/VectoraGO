@@ -15,6 +15,7 @@ func (hs *HTTPServer) RegisterRoutes(jwtManager *auth.JWTManager, rbacManager *a
 	chatHandler := handlers.NewChatHandler(tenantMgr)
 	planHandler := handlers.NewPlanHandler(tenantMgr)
 	embedHandler := handlers.NewEmbedHandler(tenantMgr)
+	wsHandler := handlers.NewWSHandler(tenantMgr)
 
 	// API v1 rotas
 	hs.router.Route("/api/v1", func(r chi.Router) {
@@ -58,6 +59,9 @@ func (hs *HTTPServer) RegisterRoutes(jwtManager *auth.JWTManager, rbacManager *a
 			r.Get("/workspaces", handleAdminWorkspaces)
 			r.Get("/logs", handleAdminLogs)
 		})
+
+		// WebSocket agent (Phase 7)
+		r.Get("/ws/agent", wsHandler.HandleWS)
 	})
 
 	// Legacy/backward compatibility rotas (sem /api/v1 prefix)

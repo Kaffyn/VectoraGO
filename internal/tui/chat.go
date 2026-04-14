@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/glamour"
 )
 
 var (
@@ -114,7 +115,14 @@ func (m ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case string:
 		m.Sending = false
-		m.messages = append(m.messages, botNameStyle.Render("Vectora: ") + msg)
+		
+		// Render markdown with Glamour
+		rendered, err := glamour.Render(msg, "dark")
+		if err != nil {
+			rendered = msg // Fallback to plain text
+		}
+		
+		m.messages = append(m.messages, botNameStyle.Render("Vectora: ") + rendered)
 		m.viewport.SetContent(strings.Join(m.messages, "\n\n"))
 		m.viewport.GotoBottom()
 		return m, nil
