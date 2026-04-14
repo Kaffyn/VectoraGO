@@ -20,36 +20,40 @@ type QuantConfig struct {
 
 // TurboQuant é o orquestrador de quantização avançada do Vectora
 type TurboQuant struct {
-	config QuantConfig
+	config  QuantConfig
+	rotator *OrthogonalRotator
+	qjl     *QJLQuant
 }
 
 func NewTurboQuant(cfg QuantConfig) *TurboQuant {
-	return &TurboQuant{config: cfg}
+	// Usamos um seed fixo para o Beta; em produção isso pode ser per-tenant.
+	seed := int64(42)
+	return &TurboQuant{
+		config:  cfg,
+		rotator: NewOrthogonalRotator(cfg.Dimension, seed),
+		qjl:     NewQJLQuant(cfg.Dimension, seed),
+	}
 }
 
 func (t *TurboQuant) Encode(vector []float32) ([]byte, error) {
-	// Implementação inicial: PolarQuant + Angle Extraction (Beta)
-	// Para o MVP Beta, usaremos compressão de 1-bit para teste
-	
 	if len(vector) != t.config.Dimension {
 		return nil, fmt.Errorf("dimension mismatch: expected %d, got %d", t.config.Dimension, len(vector))
 	}
 
-	// Simplificação: 1-bit sign quantization (Basic QJL style)
-	// Futuras iterações incluirão Polar Rotation
-	numBytes := (len(vector) + 7) / 8
-	encoded := make([]byte, numBytes)
-	
-	for i, val := range vector {
-		if val > 0 {
-			encoded[i/8] |= (1 << (uint(i) % 8))
-		}
-	}
-	
-	return encoded, nil
+	// 1. Rotação Ortogonal (Efeito ScaNN/Quark)
+	// Espalha a informação uniformemente antes da quantização
+	rotated := t.rotator.Rotate(vector)
+
+	// 2. Estabilização QJL
+	stabilized := t.qjl.Stabilize(rotated)
+
+	// 3. Quantização 1-bit (Simplificado para Beta)
+	return t.qjl.PackBits(stabilized), nil
 }
 
 func (t *TurboQuant) Decode(data []byte) ([]float32, error) {
+	// No Beta, retornamos o vetor estabilizado/rotacionado (aproximação)
+	// Para busca real Hamming, o Decode nem sempre é necessário se o índice busca bits
 	vector := make([]float32, t.config.Dimension)
 	
 	for i := 0; i < t.config.Dimension; i++ {
