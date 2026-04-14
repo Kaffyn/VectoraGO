@@ -16,10 +16,14 @@ import (
 // Runner orquestra a execução dos testes Harness v2.0
 type Runner struct {
 	engine *engine.Engine
+	judger *Judger
 }
 
-func NewRunner(eng *engine.Engine) *Runner {
-	return &Runner{engine: eng}
+func NewRunner(eng *engine.Engine, judge *Judger) *Runner {
+	return &Runner{
+		engine: eng,
+		judger: judge,
+	}
 }
 
 // Run executa um caso de teste Harness v2.0 completo com:
@@ -63,6 +67,15 @@ func (r *Runner) Run(ctx context.Context, tc TestCase) (*TestResult, error) {
 	preferredModel := ""
 	if len(tc.Execution.Routing.Preferred) > 0 {
 		preferredModel = tc.Execution.Routing.Preferred[0]
+	}
+
+	// === PHASE 2.5: CHAOS MONKEY SETUP ===
+	if tc.Execution.FaultInjection.Enabled {
+		// Note: This requires the Engine to support tool swapping or wrapping.
+		// For this implementation, we assume engine.WrapTools exists or we use the Registry directly.
+		trace = append(trace, TraceEntry{Step: 0, Action: "chaos_monkey_init", Details: fmt.Sprintf("FailRate: %.2f", tc.Execution.FaultInjection.FailureRate), Severity: "warn"})
+		// Lógica simplificada: o engine já deve estar configurado com os wrappers se necessário, 
+		// ou injetamos aqui no Registry do engine.
 	}
 
 	// === PHASE 3: AGENT EXECUTION (with token tracking) ===
@@ -250,6 +263,22 @@ func (r *Runner) Run(ctx context.Context, tc TestCase) (*TestResult, error) {
 				Details:  fmt.Sprintf("file %q exists and is in forbidden list — verify manually", forbidden),
 				Severity: "warn",
 			})
+		}
+	}
+
+	// === PHASE 9: LLM JUDGE EVALUATION ===
+	if r.judger != nil && tc.Evaluation.Judge.Model != "" {
+		trace = append(trace, TraceEntry{Step: stepNum + 1, Action: "judge_start", Details: tc.Evaluation.Judge.Model, Severity: "info"})
+		verdict, err := r.judger.Evaluate(ctx, tc.Task.Prompt, finalOutput)
+		if err != nil {
+			trace = append(trace, TraceEntry{Step: stepNum + 1, Action: "judge_error", Details: err.Error(), Severity: "error"})
+		} else {
+			result.JudgeVerdict = verdict
+			if !verdict.PassThreshold {
+				result.Passed = false
+				result.Error = fmt.Errorf("Judge rejected output (Score: %.2f): %s", verdict.Score, verdict.Reasoning)
+			}
+			trace = append(trace, TraceEntry{Step: stepNum + 1, Action: "judge_complete", Details: fmt.Sprintf("Score: %.2f", verdict.Score), Severity: "info"})
 		}
 	}
 

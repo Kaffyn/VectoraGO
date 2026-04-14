@@ -56,20 +56,20 @@ func runHarness(testDir string) error {
 	toolsReg := tools.NewRegistry(tempDir, guardian, kvStore)
 	
 	eng := engine.NewEngine(vecStore, kvStore, llmRouter, toolsReg, guardian, nil)
-	runner := harness.NewRunner(eng)
 	
-	// 2. Load tests
-	files, err := os.ReadDir(testDir)
-	if err != nil {
-		return fmt.Errorf("failed to read harness directory: %w", err)
-	}
+	judge := harness.NewJudger(llmRouter, harness.JudgeConfig{Method: "llm_as_a_judge"})
+	runner := harness.NewRunner(eng, judge)
 	
+	// 2. Load tests recursively
 	var testCases []harness.TestCase
-	for _, f := range files {
-		if !f.IsDir() && (strings.HasSuffix(f.Name(), ".yaml") || strings.HasSuffix(f.Name(), ".yml")) {
-			data, err := os.ReadFile(filepath.Join(testDir, f.Name()))
+	err = filepath.WalkDir(testDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && (strings.HasSuffix(d.Name(), ".yaml") || strings.HasSuffix(d.Name(), ".yml")) {
+			data, err := os.ReadFile(path)
 			if err != nil {
-				continue
+				return nil
 			}
 			var tc harness.TestCase
 			if err := yaml.Unmarshal(data, &tc); err == nil {
@@ -78,6 +78,10 @@ func runHarness(testDir string) error {
 				}
 			}
 		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to walk harness directory: %w", err)
 	}
 	
 	if len(testCases) == 0 {
@@ -105,8 +109,17 @@ func runHarness(testDir string) error {
 		if res.Passed {
 			passed++
 			fmt.Printf("  ✅ PASSED (%.2fs)\n", res.Duration.Seconds())
+			if res.JudgeVerdict != nil {
+				fmt.Printf("      Judge Score: %.2f | Pass: %v\n", res.JudgeVerdict.Score, res.JudgeVerdict.PassThreshold)
+				for dim, s := range res.JudgeVerdict.Dimensions {
+					fmt.Printf("      - %s: %.2f\n", dim, s)
+				}
+			}
 		} else {
 			fmt.Printf("  ❌ FAILED: %v\n", res.Error)
+			if res.JudgeVerdict != nil {
+				fmt.Printf("      Judge Reasoning: %s\n", res.JudgeVerdict.Reasoning)
+			}
 			fmt.Printf("  --- Output Snippet ---\n%s\n----------------------\n", truncate(res.Output, 200))
 		}
 	}

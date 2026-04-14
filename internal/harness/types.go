@@ -177,14 +177,15 @@ type ObservabilityConfig struct {
 
 // TestResult represents the result of a harness run
 type TestResult struct {
-	TestCaseID string
-	Passed     bool
-	Score      float32
-	Duration   time.Duration
-	Output     string
-	Error      error
-	Metrics    ResultMetrics
-	Trace      []TraceEntry
+	TestCaseID   string
+	Passed       bool
+	Score        float32
+	Duration     time.Duration
+	Output       string
+	Error        error
+	Metrics      ResultMetrics
+	Trace        []TraceEntry
+	JudgeVerdict *JudgeVerdict
 }
 
 type ResultMetrics struct {
