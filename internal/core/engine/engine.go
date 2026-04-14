@@ -40,6 +40,7 @@ type Engine struct {
 	KV       *db.BBoltStore
 	LLM      *llm.Router
 	Tools    *tools.Registry
+	Executor *tools.Executor // Parallel tool execution with dependency resolution
 	Guardian *policies.Guardian
 	Indexer  *ingestion.Indexer
 	Status   string
@@ -58,6 +59,7 @@ func NewEngine(
 		KV:       kvStore,
 		LLM:      llmRouter,
 		Tools:    toolsReg,
+		Executor: tools.NewExecutor(toolsReg),
 		Guardian: guardian,
 		Indexer:  indexer,
 		Status:   "idle",
@@ -246,14 +248,32 @@ func (e *Engine) StreamQuery(ctx context.Context, query string, workspaceID stri
 				return
 			}
 
-			// Execute tools and add results to history
-			for _, tc := range resp.ToolCalls {
+			// Convert tool calls to execution items for parallel execution
+			executions := make([]tools.ToolExecution, len(resp.ToolCalls))
+			for i, tc := range resp.ToolCalls {
+				executions[i] = tools.ToolExecution{
+					ID:   tc.ID,
+					Name: tc.Name,
+					Args: tc.Args,
+				}
+				// Notify user about execution
 				ch <- QueryChunk{Token: fmt.Sprintf("\n[Executing %s...]", tc.Name), IsFinal: false}
+			}
 
-				result, err := e.Tools.ExecuteStringArgs(ctx, tc.Name, tc.Args)
+			// Execute tools in parallel (with dependency resolution if needed)
+			results := e.Executor.ExecuteParallel(ctx, executions)
+
+			// Process results and add to message history
+			for _, tc := range resp.ToolCalls {
+				result := results[tc.ID]
 				output := ""
-				if err != nil {
-					output = fmt.Sprintf("Error: %v", err)
+				if result == nil {
+					output = fmt.Sprintf("Error: Tool %s did not complete", tc.Name)
+				} else if result.IsError {
+					output = fmt.Sprintf("Error: %v", result.Error)
+					if result.Output != "" {
+						output = result.Output
+					}
 				} else {
 					output = result.Output
 				}
@@ -262,7 +282,7 @@ func (e *Engine) StreamQuery(ctx context.Context, query string, workspaceID stri
 					Role:       llm.RoleTool,
 					Content:    output,
 					ToolCallID: tc.ID,
-					Metadata:   resp.Metadata, // Pass thought signature to tool response turn if needed
+					Metadata:   resp.Metadata,
 				})
 			}
 		}
