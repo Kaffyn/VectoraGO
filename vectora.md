@@ -66,47 +66,58 @@ module github.com/kaffyn/vectora
 go 1.23
 
 require (
-    // Core runtime
-    github.com/go-chi/chi/v5 v5.0.11              // HTTP router
-    github.com/gorilla/websocket v1.5.1            // WebSocket para streaming
-    google.golang.org/grpc v1.63.0                 // gRPC para interna
+    // Core runtime & Communication
+    github.com/go-chi/chi/v5 v5.0.11               // HTTP router (Service mode)
+    github.com/gorilla/websocket v1.5.1             // WebSocket para streaming
+    github.com/gorilla/rpc v1.2.1                   // JSON-RPC 2.0 (Core IPC)
+    google.golang.org/grpc v1.63.0                  // gRPC para comunicação interna
+    github.com/sourcegraph/jsonrpc2 v0.1.0          // High-level JSON-RPC clients
 
-    // JSON-RPC 2.0
-    github.com/sourcegraph/jsonrpc2 v0.1.0        // JSON-RPC client/server
+    // Protocols
+    github.com/mark3labs/mcp-go v0.2.0              // MCP server/client (VSCode protocol)
+    // ACP Protocol: implementado manualmente sobre spec BeeAI
 
-    // MCP Protocol (Go impl)
-    github.com/mark3labs/mcp-go v0.2.0             // MCP server/client
+    // KV & Vector Storage
+    github.com/etcd-io/bbolt v1.3.11               // BoltDB (Core KV)
+    github.com/unum-cloud/usearch-go v0.2.0        // HNSW vector indices (CGo)
+    github.com/cockroachdb/pebble v1.1.0            // Alternativa para Service em escala
 
-    // KV Store
-    github.com/etcd-io/bbolt v1.3.11              // BoltDB (embedded KV)
+    // Algebra Linear (TurboQuant)
+    gonum.org/v1/gonum v0.14.0                      // TurboQuant Go-native algebra
+    github.com/willf/bitset v1.1.11                 // Bit operations (QJL)
 
-    // Vector Store
-    github.com/unum-cloud/usearch-go v0.2.0       // HNSW embeddings
-
-    // LLM SDKs
+    // LLM SDKs (Oficiais 2026)
     github.com/anthropics/anthropic-sdk-go v0.1.0
-    github.com/sashabaranov/go-openai v1.24.0
-    github.com/google/generative-ai-go v0.9.0
+    github.com/sashabaranov/go-openai v1.24.0       // OpenAI v5.4 support
+    google.golang.org/api/generativelanguage v0.9.0 // Gemini 3.1 Pro
+    github.com/ollama/ollama v0.1.32                // Local Ollama client
 
-    // Utilities
-    github.com/spf13/cobra v1.8.0                 // CLI framework
-    github.com/go-playground/validator v10.20.0   // Input validation
-    github.com/monochromegane/go-gitignore v0.0.0 // .gitignore parsing
-    github.com/charmbracelet/bubbletea v0.25.0    // TUI
-    github.com/charmbracelet/glamour v0.10.0      // Markdown rendering
-    github.com/golang-jwt/jwt/v5 v5.2.0           // JWT auth
-    github.com/google/go-github/v60 v60.0.0        // GitHub API
-    go-git.io/go-git/v5 v5.12.0                    // Git ops
+    // CLI & TUI (Charmbracelet Stack)
+    github.com/spf13/cobra v1.8.0                  // CLI framework
+    github.com/charmbracelet/bubbletea v0.25.0     // TUI workflow (Agent Mode)
+    github.com/charmbracelet/glamour v0.10.0       // Markdown rendering
+    github.com/charmbracelet/bubbles v0.18.0       // UI components
+    github.com/charmbracelet/lipgloss v0.10.0      // Styling
+    github.com/alecthomas/chroma v2.13.0           // Code syntax highlighting
 
-    // Observability
-    go.opentelemetry.io/otel v1.26.0              // OpenTelemetry
-    go.opentelemetry.io/otel/exporters/otlp/... v1.26.0
-    github.com/rs/zerolog v1.32.0                 // Structured logging
+    // Tray & UI (Wails Stack)
+    github.com/getlantern/systray v1.2.2           // System tray (Cross-platform)
+    github.com/wailsapp/wails/v3 v3.0.0            // Go + React native app wrapper
 
-    // Misc
-    github.com/joho/godotenv v1.5.1               // .env loading
-    github.com/willf/bitset v1.1.11                // Bit operations (QJL)
-    gonum.org/v1/gonum v0.14.0                     // Matrix algebra
+    // Safety & Security
+    github.com/go-playground/validator v10.20.0    // Input validation
+    github.com/monochromegane/go-gitignore v0.0.0  // .vectoraignore parsing
+    github.com/golang-jwt/jwt/v5 v5.2.0            // JWT (Service authentication)
+    golang.org/x/time/rate v0.5.0                   // Rate limiting
+
+    // Git & GitHub
+    github.com/google/go-github/v60 v60.0.0         // GitHub API
+    go-git.io/go-git/v5 v5.12.0                     // Local Git operations
+    github.com/sergi/go-diff v1.3.1                 // Diff analysis
+
+    // Telemetry
+    go.opentelemetry.io/otel v1.26.0               // OpenTelemetry
+    github.com/rs/zerolog v1.32.0                  // Zero-allocation logging
 )
 ```
 
