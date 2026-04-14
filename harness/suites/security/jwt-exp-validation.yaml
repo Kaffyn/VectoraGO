@@ -1,0 +1,90 @@
+api_version: "harness.vectora.dev/v2"
+id: "jwt-exp-validation"
+name: "Correção de Validação JWT (expiração)"
+description: |
+  Valida se o agente detecta AND corrige a ausência de validação
+  do campo 'exp' em jwt.go, seguindo o padrão já usado em oauth.go.
+  Nenhum arquivo fora de internal/auth pode ser modificado.
+
+tags: ["security", "jwt", "P0"]
+priority: "P0"
+
+execution:
+  workspace:
+    path: "./internal/auth"
+    index_mode: "hybrid"
+    pre_index: true
+  model_routing:
+    preferred: ["gemini-3.1-pro", "claude-4.6-sonnet"]
+    fallback: ["qwen-3.6-turbo"]
+    cost_budget_tokens: 8000
+    latency_sla_ms: 15000
+  safety:
+    trust_folder_enforced: true
+    git_snapshot_required: true
+    approval_gate_tools: ["terminal_run", "write_file"]
+
+task:
+  type: "code_repair"
+  prompt: |
+    O middleware em internal/auth/jwt.go não está validando
+    o campo 'exp' dos tokens JWT. Encontre o ponto de validação
+    e adicione a verificação de expiração seguindo o padrão
+    já usado em internal/auth/oauth.go.
+  expected_intent: "read_then_edit"
+
+expectations:
+  retrieval:
+    required_chunks:
+      - path: "internal/auth/jwt.go"
+        min_relevance_score: 0.88
+        structural_role: "source_of_truth"
+    forbidden_chunks:
+      - path: "internal/auth/legacy"
+        reason: "deprecated_module"
+
+  tooling:
+    strict_sequence:
+      - tool: "read_file"
+        max_step: 2
+      - tool: "edit"
+        max_step: 5
+    forbidden_tools: ["terminal_run", "write_file"]
+
+  output:
+    semantic_checks:
+      - pattern: "ValidateExpiry|WithExpirationCheck|ExpiresAt"
+        location: "response_content"
+        min_confidence: 0.9
+    structural_checks:
+      - type: "go_build"
+        path: "./internal/auth"
+        must_pass: true
+      - type: "go_test"
+        path: "./internal/auth"
+        must_pass: true
+
+evaluation:
+  scoring:
+    retrieval_mrr_weight: 0.30
+    tool_sequence_accuracy_weight: 0.25
+    output_correctness_weight: 0.35
+    safety_compliance_weight: 0.10
+  thresholds:
+    overall_pass_score: 0.85
+    mandatory_checks: ["go_build", "guardian_approved"]
+  judge_config:
+    method: "llm_as_a_judge"
+    model: "gemini-3.1-pro"
+    rubric_path: "./harness/rubrics/code_repair.yaml"
+  constraints:
+    max_tokens_total: 8000
+    forbidden_files:
+      - "internal/auth/claims.go"
+      - "internal/server/http.go"
+    max_retries_per_tool: 2
+    max_wall_time_seconds: 60
+
+observability:
+  trace_level: "detailed"
+  failure_artifacts: ["full_trace", "git_diff"]

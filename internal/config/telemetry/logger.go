@@ -78,6 +78,8 @@ func LogLLMInteraction(provider string, tokensIn int, tokensOut int, costUsd flo
 		"tokens_in", tokensIn,
 		"tokens_out", tokensOut,
 		"estimated_cost_usd", costUsd)
+	// Bridge to Harness runner — this is the 'cable' connecting telemetry to ResultMetrics.
+	RecordInteraction(provider, tokensIn, tokensOut, costUsd)
 }
 
 // sanitizingHandler wraps slog.Handler to redact sensitive data from logs.
