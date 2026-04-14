@@ -1,11 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vectora
+  name: vectora-core
+  namespace: default
   labels:
     app: vectora
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: vectora
@@ -15,15 +16,26 @@ spec:
         app: vectora
     spec:
       containers:
-      - name: vectora
+      - name: vectora-node
         image: kaffyn/vectora:latest
         ports:
         - containerPort: 8080
-        envFrom:
-        - configMapRef:
-            name: vectora-config
-        - secretRef:
-            name: vectora-secrets
+        env:
+        - name: VECTORA_MODE
+          value: "service"
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: vectora-secrets
+              key: gemini-api-key
+        - name: VECTORA_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: vectora-secrets
+              key: secret-key
+        volumeMounts:
+        - name: vectora-data
+          mountPath: /root/.config/vectora
         resources:
           limits:
             cpu: "1"
@@ -33,28 +45,18 @@ spec:
             memory: "512Mi"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /api/v1/health
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        volumeMounts:
-        - name: data
-          mountPath: /root/.Vectora
       volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: vectora-pvc
+      - name: vectora-data
+        emptyDir: {} # Em produção use PersistentVolumeClaim
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: vectora
+  name: vectora-service
 spec:
   selector:
     app: vectora

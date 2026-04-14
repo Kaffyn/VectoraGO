@@ -1,41 +1,47 @@
-# Stage 1: Build
-FROM golang:1.26-alpine AS builder
+# Build stage: Compilação do Microkernel com suporte a CGO
+FROM golang:1.26.1-bookworm AS builder
 
-# Install build dependencies (needed for CGO and future usearch-go)
-RUN apk add --no-cache gcc musl-dev g++ make
+# Instalar dependências de compilação C/C++ (necessárias para USearch e TurboQuant)
+RUN apt-get update && apt-get install -y \
+    g++ \
+    make \
+    cmake \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy go.mod and go.sum
+# Copiar arquivos de dependência
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
+# Copiar o código fonte e os headers do USearch
 COPY . .
 
-# Build the core binary
-# Note: CGO_ENABLED=1 because usearch-go will require it later
-RUN CGO_ENABLED=1 GOOS=linux go build -o /vectora ./cmd/core/main.go
+# Compilar o binário principal para ambiente Linux
+# Ativando CGO para suporte à biblioteca vetorial USearch
+RUN CGO_CFLAGS="-I/app/internal/storage/db" \
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=1 \
+    go build -mod=vendor -ldflags="-s -w -extldflags '-static'" -o vectora ./cmd/core
 
-# Stage 2: Runtime
-FROM alpine:latest
+# Final stage: Imagem de produção leve
+FROM debian:bookworm-slim
 
-RUN apk add --no-cache ca-certificates libc6-compat
+# Instalar certificados CA para conexões HTTPS com provedores LLM (Gemini, Anthropic, etc.)
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /root/
 
-# Copy binary from builder
-COPY --from=builder /vectora .
+# Copiar o executável do builder
+COPY --from=builder /app/vectora .
 
-# Create data directory
-RUN mkdir -p /root/.Vectora/data
+# Criar diretório para persistência de dados
+RUN mkdir -p /root/.config/vectora
 
-# Expose HTTP port
+# Expor a porta da API Cloud-Native (Phase 4)
 EXPOSE 8080
 
-# Environment variables
-ENV VECTORA_MODE=service
-ENV PORT=8080
-
-# Entry point
-ENTRYPOINT ["./vectora", "start"]
+# Comando padrão: inicia o daemon
+ENTRYPOINT ["./vectora"]
+CMD ["core", "--detached=false"]

@@ -779,38 +779,51 @@ func initEngine(ctx context.Context, workspace string) (*engine.Engine, func(), 
 	return eng, cleanup, nil
 }
 
-func runAcp(workspace string) error {
-	var conn net.Conn
-	var err error
+func runAcp(customWorkspace string) error {
+	// Redirecionar logs do servidor para stderr para não poluir o stdout (reservado para JSON-RPC/ACP)
+	infra.SetupLogger()
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	if runtime.GOOS == "windows" {
-		conn, err = net.Dial("tcp", "127.0.0.1:42782")
-	} else {
-		systemManager, _ := vecos.NewManager()
-		appDataDir, _ := systemManager.GetAppDataDir()
-		sockPath := filepath.Join(appDataDir, "run", "vectora_acp.sock")
-		conn, err = net.Dial("unix", sockPath)
-	}
-
+	absPath, err := filepath.Abs(customWorkspace)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error: Vectora core is not running!")
-		fmt.Fprintln(os.Stderr, "Please start the core first: vectora start")
-		os.Exit(1)
+		return fmt.Errorf("caminho de workspace inválido: %w", err)
 	}
-	defer conn.Close()
 
-	if workspace == "" {
-		workspace = "."
+	ctx := context.Background()
+	cfg := infra.LoadConfig()
+	prefs := infra.LoadPreferences()
+
+	// Inicializar storage persistente
+	kvStore, err := db.NewKVStore()
+	if err != nil {
+		return fmt.Errorf("falha ao inicializar KVStore: %w", err)
 	}
-	wsAbs, _ := filepath.Abs(workspace)
-	fmt.Fprintf(conn, "%s\n", wsAbs)
+	defer kvStore.Close()
 
-	// Cópia bidirecional (Bridge)
-	go io.Copy(conn, os.Stdin)
-	io.Copy(os.Stdout, conn)
+	vecStore, err := db.NewVectorStore()
+	if err != nil {
+		return fmt.Errorf("falha ao inicializar VectorStore: %w", err)
+	}
 
-	return nil
+	// Inicializar motor de inferência
+	llmRouter := llm.SetupRouter(ctx, cfg, prefs)
+	msgService := llm.NewMessageService(kvStore)
+
+	// Criar o Agente Vectora (Personalidade IDE)
+	agent := acp.NewVectoraAgent(
+		"vectora-universal-agent",
+		version,
+		kvStore,
+		vecStore,
+		llmRouter,
+		msgService,
+		logger,
+	)
+
+	fmt.Fprintf(os.Stderr, "🚀 Vectora Universal Agent iniciado em %s\n", absPath)
+	return acp.StartACPAgent(ctx, agent, logger)
 }
+
 
 func runMcp(workspace string) error {
 	ctx := context.Background()
