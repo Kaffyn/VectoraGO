@@ -493,7 +493,7 @@ func runCore() {
 	httpServer := server.NewHTTPServer(httpConfig)
 	
 	// Setup Auth managers for Cloud-Native API
-	secretKey := cfg.SecretKey
+	secretKey := cfg.Settings.SecretKey
 	if secretKey == "" {
 		secretKey = "default-unsafe-secret-key-change-me"
 		infra.Logger().Warn("VECTORA_SECRET_KEY not set. Using unsafe default.")

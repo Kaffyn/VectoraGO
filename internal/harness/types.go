@@ -22,11 +22,11 @@ type TestCase struct {
 	Observability ObservabilityConfig    `yaml:"observability"`
 }
 
-// ExecutionConfig defines how the test should be set up
 type ExecutionConfig struct {
-	Workspace WorkspaceConfig `yaml:"workspace"`
-	Routing   ModelRouting    `yaml:"model_routing"`
-	Safety    SafetyConfig    `yaml:"safety"`
+	Workspace      WorkspaceConfig `yaml:"workspace"`
+	Routing        ModelRouting    `yaml:"model_routing"`
+	Safety         SafetyConfig    `yaml:"safety"`
+	FaultInjection FaultInjection  `yaml:"fault_injection"`
 }
 
 type WorkspaceConfig struct {
@@ -147,7 +147,6 @@ type EvaluationConfig struct {
 	Judge       JudgeConfig        `yaml:"judge_config"`
 	Constraints Constraints        `yaml:"constraints"`
 	Analysis    CodeQualityAnalysis `yaml:"code_quality"`
-	FaultInject FaultInjection     `yaml:"fault_injection"`
 }
 
 type ScoringConfig struct {

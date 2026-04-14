@@ -112,7 +112,7 @@ func (r *Runner) Run(ctx context.Context, tc TestCase) (*TestResult, error) {
 			}
 
 			// Read telemetry bridge for this step's token usage
-			_, tokensOut, costUSD, _ := telemetry.GetLastInteractionMetrics()
+			_, tokensOut, _, _ := telemetry.GetLastInteractionMetrics()
 			stepLatency := time.Since(stepStart).Milliseconds()
 			accumulator.Record(telemetry.StepMetric{
 				Step:      stepNum,

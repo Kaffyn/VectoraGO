@@ -73,7 +73,7 @@ func NewEmbedHandler(tm *manager.TenantManager) *EmbedHandler {
 // HandleStartEmbed processa POST /api/embed/start
 func (h *EmbedHandler) HandleStartEmbed(w http.ResponseWriter, r *http.Request) {
 	requestID := GetRequestID(r)
-	userID := GetUserIDFromContext(r)
+	_ = GetUserIDFromContext(r)
 
 	var req EmbedRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

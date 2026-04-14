@@ -62,7 +62,7 @@ func runHarness(testDir string) error {
 	
 	// 2. Load tests recursively
 	var testCases []harness.TestCase
-	err = filepath.WalkDir(testDir, func(path string, d os.DirEntry, err error) error {
+	err := filepath.WalkDir(testDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -97,7 +97,7 @@ func runHarness(testDir string) error {
 		
 		// Override model if specified in flag
 		if harnessModel != "" {
-			tc.Config.Model = harnessModel
+			tc.Execution.Routing.Preferred = []string{harnessModel}
 		}
 		
 		res, err := runner.Run(ctx, tc)

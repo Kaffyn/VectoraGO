@@ -77,7 +77,7 @@ func NewPlanHandler(tm *manager.TenantManager) *PlanHandler {
 // HandleCreatePlan processa POST /api/plan
 func (h *PlanHandler) HandleCreatePlan(w http.ResponseWriter, r *http.Request) {
 	requestID := GetRequestID(r)
-	userID := GetUserIDFromContext(r)
+	_ = GetUserIDFromContext(r)
 
 	var req PlanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -98,7 +98,7 @@ func (h *PlanHandler) HandleCreatePlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Chamar engine para gerar plano (usando modo planning)
-	answer, model, err := tenant.Engine.Query(r.Context(), req.Description, req.WorkspaceID, "", "planning", "standard")
+	answer, _, err := tenant.Engine.Query(r.Context(), req.Description, req.WorkspaceID, "", "planning", "standard")
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("failed to generate plan: %v", err), requestID)
 		return

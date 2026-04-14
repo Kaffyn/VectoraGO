@@ -27,7 +27,7 @@ var AllProviders = []ProviderInfo{
 		ID:      "gemini",
 		I18nKey: "tray_prov_gemini",
 		GetKey: func(cfg *infra.Config) string {
-			return cfg.GeminiAPIKey
+			return cfg.Providers.Gemini.APIKey
 		},
 		Setup: func(ctx context.Context, key string, cfg *infra.Config) (llm.Provider, error) {
 			return llm.NewGeminiProvider(ctx, key)
@@ -37,7 +37,7 @@ var AllProviders = []ProviderInfo{
 		ID:      "claude",
 		I18nKey: "tray_prov_claude",
 		GetKey: func(cfg *infra.Config) string {
-			return cfg.ClaudeAPIKey
+			return cfg.Providers.Claude.APIKey
 		},
 		Setup: func(ctx context.Context, key string, cfg *infra.Config) (llm.Provider, error) {
 			return llm.NewClaudeProvider(ctx, key)
@@ -47,20 +47,20 @@ var AllProviders = []ProviderInfo{
 		ID:      "openai",
 		I18nKey: "tray_prov_openai",
 		GetKey: func(cfg *infra.Config) string {
-			return cfg.OpenAIAPIKey
+			return cfg.Providers.OpenAI.APIKey
 		},
 		Setup: func(ctx context.Context, key string, cfg *infra.Config) (llm.Provider, error) {
-			return llm.NewOpenAIProvider(key, cfg.OpenAIBaseURL, "openai"), nil
+			return llm.NewOpenAIProvider(key, cfg.Providers.OpenAI.BaseURL, "openai"), nil
 		},
 	},
 	{
 		ID:      "deepseek",
 		I18nKey: "tray_prov_deepseek",
 		GetKey: func(cfg *infra.Config) string {
-			return cfg.DeepSeekAPIKey
+			return cfg.Providers.DeepSeek.APIKey
 		},
 		Setup: func(ctx context.Context, key string, cfg *infra.Config) (llm.Provider, error) {
-			baseURL := cfg.DeepSeekBaseURL
+			baseURL := cfg.Providers.DeepSeek.BaseURL
 			if baseURL == "" {
 				baseURL = "https://api.deepseek.com/v1"
 			}
@@ -71,10 +71,10 @@ var AllProviders = []ProviderInfo{
 		ID:      "mistral",
 		I18nKey: "tray_prov_mistral",
 		GetKey: func(cfg *infra.Config) string {
-			return cfg.MistralAPIKey
+			return cfg.Providers.Mistral.APIKey
 		},
 		Setup: func(ctx context.Context, key string, cfg *infra.Config) (llm.Provider, error) {
-			baseURL := cfg.MistralBaseURL
+			baseURL := cfg.Providers.Mistral.BaseURL
 			if baseURL == "" {
 				baseURL = "https://api.mistral.ai/v1"
 			}
@@ -85,10 +85,10 @@ var AllProviders = []ProviderInfo{
 		ID:      "grok",
 		I18nKey: "tray_prov_grok",
 		GetKey: func(cfg *infra.Config) string {
-			return cfg.GrokAPIKey
+			return cfg.Providers.Grok.APIKey
 		},
 		Setup: func(ctx context.Context, key string, cfg *infra.Config) (llm.Provider, error) {
-			baseURL := cfg.GrokBaseURL
+			baseURL := cfg.Providers.Grok.BaseURL
 			if baseURL == "" {
 				baseURL = "https://api.x.ai/v1"
 			}
@@ -99,10 +99,10 @@ var AllProviders = []ProviderInfo{
 		ID:      "zhipu",
 		I18nKey: "tray_prov_zhipu",
 		GetKey: func(cfg *infra.Config) string {
-			return cfg.ZhipuAPIKey
+			return cfg.Providers.Zhipu.APIKey
 		},
 		Setup: func(ctx context.Context, key string, cfg *infra.Config) (llm.Provider, error) {
-			baseURL := cfg.ZhipuBaseURL
+			baseURL := cfg.Providers.Zhipu.BaseURL
 			if baseURL == "" {
 				baseURL = "https://open.bigmodel.cn/api/paas/v4"
 			}
@@ -129,7 +129,7 @@ var AllGateways = []GatewayInfo{
 	{
 		ID:    "openrouter",
 		Label: "OpenRouter",
-		GetKey: func(cfg *infra.Config) string { return cfg.OpenRouterAPIKey },
+		GetKey: func(cfg *infra.Config) string { return cfg.Providers.OpenRouter.APIKey },
 		Setup: func(ctx context.Context, key string, cfg *infra.Config) (llm.Provider, error) {
 			return llm.NewGatewayProvider(key, "https://openrouter.ai/api/v1", "openrouter"), nil
 		},
@@ -137,7 +137,7 @@ var AllGateways = []GatewayInfo{
 	{
 		ID:    "anannas",
 		Label: "Anannas",
-		GetKey: func(cfg *infra.Config) string { return cfg.AnannasAPIKey },
+		GetKey: func(cfg *infra.Config) string { return cfg.Providers.Anannas.APIKey },
 		Setup: func(ctx context.Context, key string, cfg *infra.Config) (llm.Provider, error) {
 			return llm.NewGatewayProvider(key, "https://api.anannas.ai/v1", "anannas"), nil
 		},
@@ -233,7 +233,7 @@ func ReloadActiveProvider() {
 	// Load active model and provider from preferences
 	ActiveModel = prefs.ActiveModel
 	if ActiveModel == "" {
-		ActiveModel = cfg.GeminiFallbackModel // Default to Gemini fallback if nothing else
+		ActiveModel = cfg.Providers.Gemini.FallbackModel // Default to Gemini fallback if nothing else
 	}
 
 	activeProvID := prefs.DefaultProvider
@@ -287,7 +287,7 @@ func onReady() {
 	mGateway = systray.AddMenuItem("Gateway", "")
 	gatewayItems = make(map[string]*systray.MenuItem)
 	cfg0 := infra.LoadConfig()
-	ActiveGatewayID = cfg0.ActiveGateway
+	ActiveGatewayID = cfg0.Settings.ActiveGateway
 	if ActiveGatewayID == "" {
 		ActiveGatewayID = "none"
 	}
@@ -547,7 +547,7 @@ func setProvider(prov ProviderInfo, secret string, cfg *infra.Config) {
 }
 
 func saveGateway(value string, cfg *infra.Config) {
-	cfg.ActiveGateway = value
+	cfg.Settings.ActiveGateway = value
 	_ = infra.SaveConfig(cfg)
 }
 

@@ -111,6 +111,11 @@ function Build-Binary {
     $env:GOOS = $os
     $env:GOARCH = $arch
     $env:CGO_ENABLED = "1"
+    
+    # Ensure CGO can find the usearch.h header if it was downloaded locally
+    $rootPath = (Get-Item .).FullName
+    $storagePath = Join-Path $rootPath "internal/storage/db"
+    $env:CGO_CFLAGS = "-I$storagePath"
 
     $suffix = if ($env:BUILD_SUFFIX) { $env:BUILD_SUFFIX } else { "" }
     $outputName = if ($os -eq "windows") { "${APP_NAME}-${os}-${arch}${suffix}${ext}" } else { "${APP_NAME}-${os}-${arch}${suffix}${ext}" }
@@ -123,7 +128,9 @@ function Build-Binary {
         $finalFlags += " $ldflags"
     }
 
-    & go build -ldflags="$finalFlags" -o $outputPath $CMD_PATH 2>&1 | Out-Null
+    $modFlag = if (Test-Path "vendor") { "-mod=vendor" } else { "" }
+
+    & go build $modFlag -ldflags="$finalFlags" -o $outputPath $CMD_PATH 2>&1 | Out-Null
 
     if ($LASTEXITCODE -eq 0 -and (Test-Path "$outputPath")) {
         $file = Get-Item "$outputPath"
@@ -135,7 +142,7 @@ function Build-Binary {
     Write-Host "${RED}FAIL${NC}"
     # Re-run with visible stderr for diagnosis
     Write-Host "  ${YELLOW}Re-running with error output:${NC}"
-    & go build -ldflags="$finalFlags" -o $outputPath $CMD_PATH
+    & go build $modFlag -ldflags="$finalFlags" -o $outputPath $CMD_PATH
     return $false
 }
 
@@ -158,6 +165,11 @@ function Build-MacOSAppBundle {
     $env:GOOS = "darwin"
     $env:GOARCH = $arch
     $env:CGO_ENABLED = "1"
+    
+    # Ensure CGO can find the usearch.h header if it was downloaded locally
+    $rootPath = (Get-Item .).FullName
+    $storagePath = Join-Path $rootPath "internal/storage/db"
+    $env:CGO_CFLAGS = "-I$storagePath"
 
     $suffix = if ($env:BUILD_SUFFIX) { $env:BUILD_SUFFIX } else { "" }
     if ($suffix -ne "") {
@@ -177,9 +189,11 @@ function Build-MacOSAppBundle {
     New-Item -ItemType Directory -Force $macosDir | Out-Null
     New-Item -ItemType Directory -Force $resourcesDir | Out-Null
 
+    $modFlag = if (Test-Path "vendor") { "-mod=vendor" } else { "" }
+
     # Compile binary directly into bundle
     $binaryPath = Join-Path $macosDir $binaryName
-    & go build -ldflags="$finalFlags" -o $binaryPath $CMD_PATH 2>&1 | Out-Null
+    & go build $modFlag -ldflags="$finalFlags" -o $binaryPath $CMD_PATH 2>&1 | Out-Null
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "${RED}FAIL${NC}"

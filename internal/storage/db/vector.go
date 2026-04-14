@@ -109,7 +109,8 @@ func (s *UsearchStore) UpsertChunk(ctx context.Context, collection string, chunk
 	defer s.mu.Unlock()
 
 	// Ensure dimension match (or re-init on first chunk)
-	if s.index.Len() == 0 && len(chunk.Vector) > 0 {
+	idxLen, _ := s.index.Len()
+	if idxLen == 0 && len(chunk.Vector) > 0 {
 		s.dim = uint(len(chunk.Vector))
 		// Re-init index with correct dimension if needed
 		// Note: simplified for now, assuming consistent dimensions
@@ -280,7 +281,7 @@ func (s *UsearchStore) Query(ctx context.Context, collection string, queryVector
 		}
 	}
 
-	ids, scores, err := s.index.Search(searchVec, topK)
+	ids, scores, err := s.index.Search(searchVec, uint(topK))
 	if err != nil {
 		return nil, fmt.Errorf("USearch search failed: %w", err)
 	}

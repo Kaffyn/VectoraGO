@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/Kaffyn/Vectora/internal/server/handlers"
 )
 
 // RequestIDMiddleware adiciona um X-Request-ID único para cada request

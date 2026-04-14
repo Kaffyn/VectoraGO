@@ -63,7 +63,7 @@ func NewChatHandler(tm *manager.TenantManager) *ChatHandler {
 // HandleChat processa POST /api/chat
 func (h *ChatHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	requestID := GetRequestID(r)
-	userID := GetUserIDFromContext(r)
+	_ = GetUserIDFromContext(r) // Keep for possible future use or audit
 
 	var req ChatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
