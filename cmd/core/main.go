@@ -265,6 +265,10 @@ func init() {
 	rootCmd.AddCommand(workspaceCmd)
 	rootCmd.AddCommand(chatCmd)
 	rootCmd.AddCommand(modelsCmd)
+	rootCmd.AddCommand(harnessCmd)
+
+	harnessCmd.Flags().StringVar(&harnessDir, "dir", "./harness", "Directory containing harness YAML files")
+	harnessCmd.Flags().StringVar(&harnessModel, "model", "", "Override LLM model for all tests")
 
 	resetCmd.Flags().BoolVar(&resetHard, "hard", false, "Confirm irreversible deletion")
 

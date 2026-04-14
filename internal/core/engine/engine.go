@@ -68,9 +68,10 @@ func NewEngine(
 
 // QueryChunk represents a streaming chunk of response.
 type QueryChunk struct {
-	Token   string
-	Sources []db.ScoredChunk
-	IsFinal bool
+	Token     string
+	Sources   []db.ScoredChunk
+	ToolCalls []string
+	IsFinal   bool
 }
 
 // ToolCallRequest is the request format for tool execution.
@@ -257,7 +258,11 @@ func (e *Engine) StreamQuery(ctx context.Context, query string, workspaceID stri
 					Args: tc.Args,
 				}
 				// Notify user about execution
-				ch <- QueryChunk{Token: fmt.Sprintf("\n[Executing %s...]", tc.Name), IsFinal: false}
+				ch <- QueryChunk{
+					Token:     fmt.Sprintf("\n[Executing %s...]", tc.Name),
+					ToolCalls: []string{tc.Name},
+					IsFinal:   false,
+				}
 			}
 
 			// Execute tools in parallel (with dependency resolution if needed)

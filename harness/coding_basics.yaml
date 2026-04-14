@@ -1,0 +1,12 @@
+id: coding-01
+description: Basic Go function identification
+input: "What does the function CalculateHash in db package do?"
+config:
+  model: "gemini-3.1-pro-preview"
+expected:
+  contains:
+    - "SHA-256"
+    - "content"
+    - "hash"
+  required_tools:
+    - "search_database"
