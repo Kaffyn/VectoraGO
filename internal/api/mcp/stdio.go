@@ -10,12 +10,12 @@ import (
 	"os"
 	"sync"
 
-	"github.com/Kaffyn/Vectora/internal/db"
-	"github.com/Kaffyn/Vectora/internal/engine"
+	"github.com/Kaffyn/Vectora/internal/storage/db"
+	"github.com/Kaffyn/Vectora/internal/core/engine"
 	"time"
 
 	"github.com/Kaffyn/Vectora/internal/llm"
-	"github.com/Kaffyn/Vectora/internal/policies"
+	"github.com/Kaffyn/Vectora/internal/config/policies"
 	"github.com/Kaffyn/Vectora/internal/tools"
 )
 

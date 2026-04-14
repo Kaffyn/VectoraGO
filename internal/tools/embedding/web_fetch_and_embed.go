@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"net/url"
 
-	"github.com/Kaffyn/Vectora/internal/db"
+	"github.com/Kaffyn/Vectora/internal/storage/db"
 	"github.com/Kaffyn/Vectora/internal/llm"
 	"github.com/Kaffyn/Vectora/internal/tools"
 	"github.com/google/uuid"

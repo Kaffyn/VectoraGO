@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	"github.com/Kaffyn/Vectora/internal/api/acp"
-	"github.com/Kaffyn/Vectora/internal/db"
-	"github.com/Kaffyn/Vectora/internal/infra"
-	"github.com/Kaffyn/Vectora/internal/ingestion"
+	"github.com/Kaffyn/Vectora/internal/storage/db"
+	"github.com/Kaffyn/Vectora/internal/storage/infra"
+	"github.com/Kaffyn/Vectora/internal/shared/ingestion"
 	"github.com/Kaffyn/Vectora/internal/llm"
-	"github.com/Kaffyn/Vectora/internal/policies"
+	"github.com/Kaffyn/Vectora/internal/config/policies"
 	"github.com/Kaffyn/Vectora/internal/tools"
 )
 

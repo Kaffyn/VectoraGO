@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Kaffyn/Vectora/internal/policies"
+	"github.com/Kaffyn/Vectora/internal/config/policies"
 )
 
 type ReadFolderTool struct {

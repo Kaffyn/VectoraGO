@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Kaffyn/Vectora/internal/db"
+	"github.com/Kaffyn/Vectora/internal/storage/db"
 	"github.com/google/uuid"
 )
 

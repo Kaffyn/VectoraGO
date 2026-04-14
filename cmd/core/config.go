@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/Kaffyn/Vectora/internal/infra"
+	"github.com/Kaffyn/Vectora/internal/storage/infra"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )

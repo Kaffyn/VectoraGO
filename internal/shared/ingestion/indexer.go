@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Kaffyn/Vectora/internal/llm"
-	"github.com/Kaffyn/Vectora/internal/policies"
+	"github.com/Kaffyn/Vectora/internal/config/policies"
 )
 
 type Indexer struct {

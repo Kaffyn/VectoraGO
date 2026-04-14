@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/Kaffyn/Vectora/internal/db"
-	"github.com/Kaffyn/Vectora/internal/policies"
+	"github.com/Kaffyn/Vectora/internal/storage/db"
+	"github.com/Kaffyn/Vectora/internal/config/policies"
 )
 
 type SaveMemoryTool struct {

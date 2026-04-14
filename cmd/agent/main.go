@@ -18,9 +18,9 @@ import (
 	"syscall"
 
 	"github.com/Kaffyn/Vectora/internal/api/acp"
-	"github.com/Kaffyn/Vectora/internal/db"
+	"github.com/Kaffyn/Vectora/internal/storage/db"
 	"github.com/Kaffyn/Vectora/internal/llm"
-	vecos "github.com/Kaffyn/Vectora/internal/os"
+	vecos "github.com/Kaffyn/Vectora/internal/platform/os"
 )
 
 func main() {

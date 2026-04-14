@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Kaffyn/Vectora/internal/manager" // Novo import
-	vecos "github.com/Kaffyn/Vectora/internal/os"
+	"github.com/Kaffyn/Vectora/internal/core/manager" // Novo import
+	vecos "github.com/Kaffyn/Vectora/internal/platform/os"
 )
 
 const ipcScannerBufSize = 4 * 1024 * 1024 // 4 MiB per connection

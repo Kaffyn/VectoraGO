@@ -6,8 +6,8 @@ import (
 	"context"
 
 	"github.com/Kaffyn/Vectora/assets"
-	"github.com/Kaffyn/Vectora/internal/i18n"
-	"github.com/Kaffyn/Vectora/internal/infra"
+	"github.com/Kaffyn/Vectora/internal/config/i18n"
+	"github.com/Kaffyn/Vectora/internal/storage/infra"
 	"github.com/Kaffyn/Vectora/internal/llm"
 	"github.com/getlantern/systray"
 )

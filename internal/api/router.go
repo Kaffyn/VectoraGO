@@ -9,7 +9,7 @@ import (
 
 	"github.com/Kaffyn/Vectora/internal/api/handlers"
 	"github.com/Kaffyn/Vectora/internal/api/jsonrpc"
-	"github.com/Kaffyn/Vectora/internal/engine"
+	"github.com/Kaffyn/Vectora/internal/core/engine"
 )
 
 // Router manages the initialization of protocol servers.

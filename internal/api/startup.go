@@ -7,7 +7,7 @@ import (
 
 	"github.com/Kaffyn/Vectora/internal/api/acp"
 	"github.com/Kaffyn/Vectora/internal/api/mcp"
-	"github.com/Kaffyn/Vectora/internal/db"
+	"github.com/Kaffyn/Vectora/internal/storage/db"
 	"github.com/Kaffyn/Vectora/internal/llm"
 )
 

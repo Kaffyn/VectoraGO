@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"sync"
 
-	vecos "github.com/Kaffyn/Vectora/internal/os"
+	vecos "github.com/Kaffyn/Vectora/internal/platform/os"
 	"github.com/google/uuid"
 )
 

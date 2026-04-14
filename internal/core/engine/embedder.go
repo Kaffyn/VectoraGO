@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Kaffyn/Vectora/internal/db"
-	"github.com/Kaffyn/Vectora/internal/infra"
+	"github.com/Kaffyn/Vectora/internal/storage/db"
+	"github.com/Kaffyn/Vectora/internal/storage/infra"
 	"github.com/Kaffyn/Vectora/internal/llm"
-	"github.com/Kaffyn/Vectora/internal/policies"
+	"github.com/Kaffyn/Vectora/internal/config/policies"
 )
 
 type EmbedJobConfig struct {

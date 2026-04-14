@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Kaffyn/Vectora/internal/db"
-	"github.com/Kaffyn/Vectora/internal/policies"
+	"github.com/Kaffyn/Vectora/internal/storage/db"
+	"github.com/Kaffyn/Vectora/internal/config/policies"
 )
 
 type Registry struct {
