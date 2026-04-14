@@ -28,6 +28,7 @@ import (
 	vecos "github.com/Kaffyn/Vectora/internal/platform/os"
 	"github.com/Kaffyn/Vectora/internal/config/policies"
 	"github.com/Kaffyn/Vectora/internal/platform/service/singleton"
+	"github.com/Kaffyn/Vectora/internal/server"
 	"github.com/Kaffyn/Vectora/internal/tools"
 	"github.com/Kaffyn/Vectora/internal/tray"
 	"github.com/inconshreveable/mousetrap"
@@ -467,6 +468,31 @@ func runCore() {
 
 	// Dev HTTP bridge for debugging
 	go ipcServer.StartDevHTTP(startPort)
+
+	// Initialize HTTP Server (Phase 4 - Cloud-Native API)
+	httpConfig := server.DefaultConfig()
+	httpConfig.Port = 8080
+	httpConfig.EnableCORS = true
+	httpConfig.CORSAllowOrigins = []string{"*"}
+
+	httpServer := server.NewHTTPServer(httpConfig)
+	if err := httpServer.Start(); err != nil {
+		infra.Logger().Error("Failed to start HTTP server", "error", err.Error())
+	}
+
+	// Setup graceful shutdown for HTTP server
+	go func() {
+		<-sigChan
+		infra.Logger().Info("Shutting down HTTP server...")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := httpServer.Stop(shutdownCtx); err != nil {
+			infra.Logger().Error("HTTP server shutdown error", "error", err.Error())
+		}
+		infra.Logger().Info("HTTP server stopped")
+		_ = s.Unlock()
+		os.Exit(0)
+	}()
 
 	infra.NotifyOS("Vectora", "Operational Assistant.")
 	tray.Setup()
