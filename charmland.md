@@ -1,8 +1,35 @@
 # 🌈 Charm Ecosystem Analysis (April 2026)
 
-Este documento analisa o ecossistema da [Charm.sh](https://charm.sh) e como ele será aplicado no amadurecimento do **Vectora** para torná-lo uma ferramenta de nível empresarial com uma experiência de usuário (UX) excepcional no terminal.
+Este documento analisa o ecossistema da [Charm.sh](https://charm.sh)
 
-## 🏗️ Core Components
+## 🏛️ Alinhamento Arquitetura (Proposta D)
+
+Na proposta de arquitetura do Vectora, o ecossistema Charm atua como a interface de alta fidelidade entre o **Core Daemon** e o usuário, garantindo que a simplicidade do Go no backend seja traduzida em elegância no frontend.
+
+---
+
+## 🏗️ Simbiose Cobra-Charm (Estratégia Tática)
+
+Para garantir performance industrial com UX premium, seguiremos três pilares:
+
+### 1. The Log Splitter (Dev vs. Ops)
+
+O sistema de logs será um wrapper sobre `charmbracelet/log`:
+
+- **Modo TTY (Terminal)**: Estilos ricos, cores e indentação para o desenvolvedor local.
+- **Modo Pipeline (Kubernetes/File)**: Estilos desativados e foco em **JSON estruturado** para o arquivo `vectora-core.log`.
+
+### 2. Ponte Estática (Lip Gloss + Cobra)
+
+Não limitaremos a beleza à tela cheia (Alternate Screen). Comandos Cobra padrão usarão **Lip Gloss** para tabelas e **Bubbles** (como Progress Bars) diretamente no stdout, elevando a qualidade de comandos como `vectora harness run`.
+
+### 3. Concorrência via `tea.Cmd`
+
+Como o Core é intensivo em I/O (RAG/Embeddings), utilizaremos `tea.Cmd` para disparar processos pesados. Isso mantém a UI fluida e responsiva, evitando "freezes" durante o processamento de grandes codebases.
+
+---
+
+## 🎨 Identidade Visual (Design System)
 
 ### 1. [Bubble Tea](https://github.com/charmbracelet/bubbletea) (The Engine)
 

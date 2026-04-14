@@ -248,21 +248,24 @@ O arquivo `vectora.md` detalha a arquitetura correta: **3 camadas** (Core Daemon
 
 **Tarefas:**
 
-1. **Production Logging (charmbracelet/log)**
-   - Implementar `internal/logger` usando Charm Log.
-   - Suporte a modo `JSON` automático quando detectado ambiente Kubernetes.
-   - Enriquecimento de logs com `trace_id` e `tenant_id`.
+1. **Production Logging Wrapper (Log Splitter)**
+   - Implementar wrapper sobre `charmbracelet/log`.
+   - Detecção automática de TTY: Pretty logs no terminal, JSON puro em arquivos/K8s.
+   - Enriquecimento de logs com metadados estruturados.
 
-2. **CLI Command Center (Bubble Tea + Lip Gloss)**
-   - Criar dashboard imersivo com painéis de status e atividade.
-   - Implementar layout adaptativo com `lipgloss`.
-   - Integração de `bubbles/viewport` para scroll infinito no chat.
+2. **Cobra-Charm Bridge (Ponte Estática)**
+   - Integrar `lipgloss` em comandos não-interativos (ex: `harness run`).
+   - Usar `bubbles/progress` e `bubbles/spinner` diretamente no stdout.
 
-3. **Universal Config Wizard (Huh?)**
+3. **CLI Command Center (Async Core)**
+   - Orquestração de RAG/Embeddings via `tea.Cmd`.
+   - Dashboard imersivo sem bloqueio de thread de interface.
+
+4. **Universal Config Wizard (Huh?)**
    - Refatorar comando `vectora config` para usar `huh`.
    - Validação de chaves de API em tempo real durante o setup.
 
-4. **Rich Rendering (Glamour)**
+5. **Rich Rendering (Glamour)**
    - Integrar renderização Markdown em todo o fluxo de saída do agente.
 
 **Deliverable:** TUI profissional, configuração guiada e logs infra-ready.
