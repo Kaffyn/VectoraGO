@@ -1,205 +1,200 @@
-# Sistema Harness — Infraestrutura de Testes e Qualidade
+# Vectora Harness — Especificação Técnica
 
-O **Harness** é o sistema de garantia de qualidade do Vectora. Ele não testa apenas se o código "roda" (testes unitários), mas se a **inteligência** e a **recuperação semântica** são precisas para tarefas de engenharia de software do mundo real.
-
-## 1. Objetivos do Harness
-
-- **Validar a Precisão Semântica**: Garantir que o motor HNSW + TurboQuant recupere os chunks corretos para perguntas complexas.
-- **Verificar Cadeias de Ferramentas**: Garantir que o Agente invoque as ferramentas corretas (`read_file`, `edit`, `grep_search`) na ordem lógica para resolver uma tarefa.
-- **Benchmarking de Modelos**: Comparar a performance de diferentes LLMs (Gemini vs Claude vs GPT) sobre a mesma codebase.
-- **Prevenção de Regressão**: Garantir que melhorias no orquestrador não quebrem a capacidade de compreensão de sistemas legados.
+> **Sistema de Validação de Inteligência Agêntica e Recuperação Semântica**
+>
+> _"Não basta o código compilar. A inteligência precisa ser precisa, segura e previsível."_
 
 ---
 
-## 2. O Formato Harness (YAML)
+## 📋 Visão Geral
 
-Os casos de teste são definidos em arquivos `.yaml` localizados em `~/.vectora/harness/` ou na raiz do projeto em `/harness/`.
+O **Vectora Harness** é a camada de garantia de qualidade que valida se o sistema de IA do Vectora entrega resultados corretos, seguros e eficientes para tarefas reais de engenharia de software.
+
+Diferente de testes unitários tradicionais, o Harness opera em três dimensões:
+
+| Dimensão           | O que valida                                      | Exemplo                                                      |
+| ------------------ | ------------------------------------------------- | ------------------------------------------------------------ |
+| **🔍 Recuperação** | Precisão do RAG híbrido (semântico + estrutural)  | "A busca por 'JWT' recuperou `jwt.go` antes de `auth.go`?"   |
+| **🧠 Raciocínio**  | Coerência do loop ReAct e decisões do agente      | "O agente planejou ler antes de editar? Lidou com erro?"     |
+| **⚡ Execução**    | Correção das ferramentas e segurança das mutações | "O `edit` gerou um patch válido? O snapshot Git foi criado?" |
+
+---
+
+## 🎯 Objetivos Estratégicos
 
 ```yaml
-id: "refactor-auth-logic"
-name: "Refatoração de Middleware de Autenticação"
-description: "Verifica se o agente consegue encontrar o erro no JWT e sugerir o patch correto."
+strategic_goals:
+  - name: "Precision First"
+    target: "MRR@5 > 0.92 para queries de codebase"
+    rationale: "Desenvolvedores não podem perder tempo com contexto irrelevante"
 
-# O contexto inicial do workspace
-context:
-  workspace_path: "./internal/auth"
-  index_required: true
+  - name: "Agent Reliability"
+    target: "95% das tarefas completas em ≤5 passos ReAct"
+    rationale: "Latência cognitiva impacta diretamente a produtividade"
 
-# A tarefa enviada ao agente
-task: "O middleware de JWT não está validando a expiração do token. Encontre o arquivo e corrija."
-
-# Expectativas de Comportamento (Garantias)
-expectations:
-  # O agente deve obrigatoriamente ler este arquivo
-  files_accessed:
-    - "internal/auth/jwt.go"
-
-  # Ferramentas que DEVEM ser chamadas
-  required_tools:
-    - "read_file"
-    - "edit"
-
-  # Conteúdo que deve estar presente na resposta final
-  min_semantic_score: 0.85
-  expected_output_patterns:
-    - "WithExpirationCheck"
-    - "jwt.ParseWithClaims"
-
-# Critérios de Sucesso
-assertions:
-  - type: "exit_code"
-    value: 0
-  - type: "git_diff_check"
-    description: "Verifica se o patch não quebrou o build"
+  - name: "Safety by Default"
+    target: "0 falsos positivos em Guardian checks"
+    rationale: "Segurança não é negociável"
 ```
 
 ---
 
-## 3. Arquitetura do Runner
+## 📐 Esquema Harness (YAML v2)
 
-O comando `vectora harness run` orquestra a execução:
+Os casos de teste vivem em `harness/*.yaml` e seguem este schema estrito:
 
-1. **Setup de Sandbox**: Cria um ambiente temporário (clone do workspace) para evitar efeitos colaterais.
-2. **Preparação de Memória**: Carrega o banco vetorial se `index_required` for true.
-3. **Execução do Agente**: Inicia o loop de pensamento do agente sobre a `task`.
-4. **Monitoramento de Ferramentas**: Intercepta todas as chamadas de ferramentas e meta-dados de busca.
-5. **Avaliação (Scoring)**: Compara a execução com as `expectations` usando um **LLM Judge** ou regras determinísticas.
+```yaml
+api_version: "harness.vectora.dev/v2"
+id: "auth-jwt-expiration-fix"
+name: "Correção de Validação de Expiração JWT"
+description: "Valida se o agente identifica a falta de validação de 'exp' em tokens JWT."
 
----
+# Contexto de execução
+execution:
+  workspace:
+    path: "./internal/auth"
+    index_mode: "hybrid"
+    pre_index: true
 
-## 4. Métricas de Qualidade
+  safety:
+    trust_folder_enforced: true
+    git_snapshot_required: true
+    approval_gate_tools: ["run_shell_command", "write_file"]
 
-O Harness gera um relatório com as seguintes métricas:
+# Tarefa enviada ao agente
+task:
+  type: "code_repair"
+  prompt: "O middleware em internal/auth/jwt.go não está validando o campo 'exp'."
 
-| Métrica                      | O que mede                                                       |
-| :--------------------------- | :--------------------------------------------------------------- |
-| **Pass Rate**                | Porcentagem de asserções que passaram.                           |
-| **Retrieval Accuracy (MRR)** | O quão alto nos resultados da busca estava o chunk necessário.   |
-| **Tool Efficiency**          | Número de passos tomados vs o caminho ótimo definido no harness. |
-| **Latência por Passo**       | Tempo gasto em raciocínio vs execução de ferramenta.             |
-| **Cost (Tokens)**            | Custo total da tarefa em tokens de entrada/saída.                |
+# Expectativas observáveis (assertions)
+expectations:
+  retrieval:
+    required_chunks:
+      - path: "internal/auth/jwt.go"
+        min_relevance_score: 0.88
 
----
+  tooling:
+    required_sequence:
+      - tool: "read_file"
+        args: { path: "internal/auth/jwt.go" }
+      - tool: "edit"
+        args: { path: "internal/auth/jwt.go" }
 
-## 5. Biblioteca de Suítes Integradas
+  output:
+    structural_checks:
+      - type: "go_build"
+        path: "./internal/auth"
+        must_pass: true
 
-O Vectora vem com suítes pré-configuradas para validação rápida:
-
-- **Suite `codebase-navigation`**: Testes de busca de símbolos e navegação de dependências.
-- **Suite `refactor-patterns`**: Testes de aplicação de design patterns via `edit`.
-- **Suite `documentation-qa`**: Testes de perguntas e respostas sobre READMEs e docs técnicas.
-
----
-
-## 6. Como Contribuir
-
-Para adicionar um novo teste:
-
-1. Crie um arquivo em `internal/harness/suites/`.
-2. Defina a tarefa e as expectativas.
-3. Rode `go test ./internal/harness/...` para validar o próprio harness.
-
----
-
-# 🧠 Especificação: O Loop de Raciocínio (Agent Core)
-
-Para que o Vectora execute o que foi definido no **Harness**, ele precisa de um motor que não apenas responda, mas que **decida**. Implementamos o padrão **ReAct (Reason + Act)** otimizado para a infraestrutura de baixa latência do Go.
-
-## 1. O Ciclo de Vida da Requisição (The "Think" Loop)
-
-O loop de raciocínio reside em `internal/core/agent.go`. Ele opera como uma máquina de estados finitos que itera até que o objetivo seja alcançado ou um limite de segurança seja atingido.
-
-### As 4 Fases do Loop:
-
-1. **Input Analysis**: O `intent.go` determina se a tarefa exige ação (Agente) ou apenas resposta (Chat).
-2. **Thought (Raciocínio)**: A LLM emite um bloco de texto explicando sua estratégia.
-   - _Ex: "Preciso ler o arquivo X para entender como o JWT é validado."_
-3. **Action (Ação)**: A LLM invoca uma ferramenta do `internal/tools`. O Vectora intercepta isso, valida as permissões e executa.
-4. **Observation (Observação)**: O output da ferramenta (sucesso, erro ou conteúdo) é anexado ao histórico como uma nova entrada de sistema, alimentando a próxima iteração.
+evaluation:
+  scoring:
+    retrieval_mrr_weight: 0.30
+    output_correctness_weight: 0.40
+    safety_compliance_weight: 0.30
+```
 
 ---
 
-## 2. Implementação Técnica: `internal/core/agent.go`
+## 🏗️ Arquitetura do Runner
 
-Abaixo, a estrutura de código para suportar o loop iterativo com suporte a cancelamento via `Context`.
+O comando `vectora harness run` orquestra a execução em 6 fases:
+
+1.  **Orchestration Layer**: Parse do YAML e resolução de roteamento de modelos.
+2.  **Sandbox Provisioning**: Clone do workspace em `/tmp` e snapshot Git inicial.
+3.  **Agent Execution**: Inicia o loop em `internal/core/agent.go` interceptando chamadas.
+4.  **Real-time Monitoring**: Validação de permissões pelo Guardian e cálculo de MRR@K.
+5.  **Evaluation Pipeline**: Checks determinísticos (build/tests) + LLM-as-a-judge.
+6.  **Teardown**: Limpeza do sandbox e exportação de métricas (Prometheus/JSON).
+
+---
+
+## 📊 Métricas e Scoring
+
+| Métrica                | Target | Por que importa                               |
+| ---------------------- | ------ | --------------------------------------------- |
+| **MRR@5**              | ≥ 0.92 | Desenvolvedor encontra o código certo rápido  |
+| **Step Efficiency**    | ≥ 0.75 | Evita loops infinitos e custos desnecessários |
+| **Tool Accuracy**      | ≥ 0.95 | Ferramentas mal invocadas quebram a execução  |
+| **Guardian Precision** | 1.0    | Bloquear arquivo legítimo é inaceitável       |
+
+---
+
+## 🧠 Loop de Raciocínio (Agent Core)
+
+### Máquina de Estados do Agente (`internal/core/agent.go`)
 
 ```go
 type AgentState struct {
-    History []llm.Message
-    Steps   int
-    MaxSteps int
+    History         []llm.Message
+    Steps           int
+    MaxSteps        int
+    BudgetTokens    int
+    UsedTokens      int
+    SafetyFlags     SafetyState
 }
 
-func (v *Vectora) RunLoop(ctx context.Context, task string) error {
-    state := &AgentState{
-        MaxSteps: 10,
-        History: []llm.Message{
-            {Role: "system", Content: v.generateSystemPrompt()},
-            {Role: "user", Content: task},
-        },
-    }
+func (a *Agent) RunLoop(ctx context.Context, task *Task) (*Result, error) {
+    state := a.initState(task)
 
     for state.Steps < state.MaxSteps {
-        // 1. THINK: Chama a LLM com as ferramentas disponíveis
-        resp, err := v.llmMgr.Generate(ctx, state.History, v.tools.List())
-        if err != nil {
-            return err
+        // THINK
+        thought, _ := a.llm.Generate(ctx, state.History, a.tools.Schema())
+        state.History = append(state.History, thought.Message)
+
+        // DECIDE
+        if len(thought.ToolCalls) == 0 {
+            return a.evaluateFinalAnswer(state)
         }
 
-        // 2. PROCESS: Verifica se há chamadas de ferramentas
-        if len(resp.ToolCalls) == 0 {
-            v.telemetry.LogFinalAnswer(resp.Content)
-            return nil // Objetivo alcançado
-        }
+        // ACT (com interceptação)
+        results, _ := a.toolExecutor.ExecuteBatch(ctx, thought.ToolCalls)
 
-        // 3. ACT: Executa ferramentas em paralelo (Fase 3 da Proposta D)
-        toolResults := v.executor.ExecuteBatch(ctx, resp.ToolCalls)
-
-        // 4. OBSERVE: Adiciona resultados ao histórico
-        state.History = append(state.History, llm.Message{Role: "assistant", ToolCalls: resp.ToolCalls})
-        for _, res := range toolResults {
+        // OBSERVE
+        for _, res := range results {
             state.History = append(state.History, llm.Message{
                 Role: "tool",
                 ToolCallID: res.ID,
                 Content: res.Output,
             })
         }
-
         state.Steps++
     }
-    return fmt.Errorf("agent reached max steps without resolution")
+    return nil, fmt.Errorf("max_steps_reached")
 }
 ```
 
 ---
 
-## 3. Integração com o Harness (Quality Gate)
+## 🧰 Biblioteca de Suítes Oficiais
 
-O loop de raciocínio é o principal sujeito de teste do **Harness**. Para que o Harness valide a "inteligência", o `Agent` deve expor um **Trace de Raciocínio**.
-
-### O que o Harness monitora no Loop:
-
-- **Coerência do Plano**: O plano gerado no Step 1 faz sentido para a tarefa?
-- **Alucinação de Ferramentas**: A LLM tentou inventar uma ferramenta que não existe no `internal/tools`?
-- **Loop Infinito**: O agente ficou preso tentando `read_file` no mesmo arquivo sem progredir?
-- **Recuperação de Erro**: Se a ferramenta `edit` falhar por erro de sintaxe, o agente consegue ler o erro e corrigir o código no próximo passo?
+- **`suite:codebase-navigation`**: Busca de símbolos e cadeias de dependências.
+- **`suite:refactor-patterns`**: Extração de interfaces e aplicação de design patterns.
+- **`suite:security-audit`**: Correção de SQL injection e detecção de secrets.
+- **`suite:documentation-qa`**: RAG sobre documentação técnica específica de versão.
 
 ---
 
-## 4. O Planner (Estratégia de Longo Prazo)
+## 🔄 Integração com CI/CD
 
-Para tarefas complexas (ex: "Refatore todo o módulo de storage"), o Vectora utiliza um sub-loop de **Planejamento**.
+O Harness pode ser integrado diretamente no GitHub Actions ou como um hook de `pre-commit`:
 
-1. **Macro-Planejador**: Decompõe a tarefa em 5-10 sub-tarefas menores.
-2. **Micro-Executor**: Executa o loop ReAct descrito acima para cada sub-tarefa.
-3. **Verificador**: Após cada sub-tarefa, o Vectora roda um mini-Harness interno para garantir que a alteração não quebrou o build.
+```bash
+# Hook de Pre-Commit
+vectora harness run \
+  --suite quick-validation \
+  --scope $(git diff --cached --name-only) \
+  --model qwen-3.6-turbo
+```
 
 ---
 
-## 5. Considerações de Segurança (Sandbox)
+## ⚠️ Considerações de Segurança (Sandbox)
 
-Como o loop de raciocínio permite que a IA "atue" no sistema:
+1.  **Trust Folder**: O agente só opera dentro do diretório do projeto.
+2.  **Snapshot Git**: Cada mutação é precedida de um snapshot atômico para rollback.
+3.  **Approval Gate**: Ferramentas sensíveis (`run_shell_command`) exigem confirmação manual.
+4.  **Token Limit**: Interrupção automática se o custo exceder o budget definido.
 
-- **Trust Folder**: O agente só pode ler/escrever dentro do diretório do projeto.
-- **Approval Gate**: Ferramentas sensíveis (como `rm` ou `git push`) exigem confirmação manual no terminal ou VSCode, a menos que o modo `--force` esteja ativo.
-- **Token Limit**: O loop é interrompido se o custo da tarefa exceder o limite definido no `config.yaml`.
+---
+
+**Próximos Passos**: Implementar o validador de schema em `internal/harness/schema/validator.go` e a primeira suíte de validação rápida.
