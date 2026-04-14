@@ -11,6 +11,7 @@ In the initial prototype, embeddings were stored as `float32` (4 bytes per dimen
 The Vectora implementation follows a three-stage pipeline to ensure maximum fidelity even under extreme compression.
 
 ### 1. Orthogonal Rotation (`internal/quant/rotation.go`)
+
 This step "spreads" information energy uniformly across dimensions, eliminating correlations that would hinder simple scalar quantization.
 
 ```go
@@ -60,7 +61,7 @@ func (r *OrthogonalRotator) Rotate(vector []float32) []float32 {
 // generateRandomOrthogonalMatrix creates an orthogonal matrix using the Gram-Schmidt method.
 func generateRandomOrthogonalMatrix(dim int, seed int64) [][]float32 {
 	rng := rand.New(rand.NewSource(seed))
-	
+
 	matrix := make([][]float32, dim)
 	for i := 0; i < dim; i++ {
 		matrix[i] = make([]float32, dim)
@@ -76,7 +77,7 @@ func generateRandomOrthogonalMatrix(dim int, seed int64) [][]float32 {
 				matrix[i][k] -= dot * matrix[j][k]
 			}
 		}
-		
+
 		norm := float32(math.Sqrt(float64(dotProduct(matrix[i], matrix[i]))))
 		if norm > 1e-8 {
 			for k := 0; k < dim; k++ {
@@ -98,6 +99,7 @@ func dotProduct(v1, v2 []float32) float32 {
 ```
 
 ### 2. QJL Stabilization (`internal/quant/qjl.go`)
+
 Implements **Quantized Johnson-Lindenstrauss** to stabilize 1-bit projections before bit-packing.
 
 ```go
@@ -127,7 +129,7 @@ func NewQJLQuant(dim int, seed int64) *QJLQuant {
 // in low-fidelity (1-bit) projections.
 func (q *QJLQuant) Stabilize(vector []float32) []float32 {
 	rng := rand.New(rand.NewSource(q.Seed))
-	
+
 	result := make([]float32, len(vector))
 	for i := range vector {
 		bias := (rng.Float32() * 2) - 1 // [-1, 1]
@@ -150,6 +152,7 @@ func (q *QJLQuant) PackBits(vector []float32) []byte {
 ```
 
 ### 3. TurboQuant Orchestrator (`internal/quant/turboquant.go`)
+
 Coordinates the full pipeline integrated with the vector store.
 
 ```go
@@ -224,6 +227,7 @@ func (t *TurboQuant) Decode(data []byte) ([]float32, error) {
 TurboQuant is selectively activated via preferences (`preferences.json`). Once enabled for a workspace, `UsearchStore` automatically applies the 1-bit pipeline before inserting vectors into the HNSW index.
 
 **Impact:**
+
 - **Economy:** ~3KB embeddings reduced to **~96 bytes** (768 bits).
 - **Performance:** Extremely fast Hamming search in compressed space.
 - **Memory:** Up to 10x reduction in I/O when handling large knowledge bases.

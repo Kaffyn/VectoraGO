@@ -2,7 +2,7 @@
 
 ## Contexto: Por Que Comprimir o Storage?
 
-No protótipo inicial, os embeddings eram armazenados como `float32` (4 bytes por dimensão). Para um vetor de 768 dimensões (Padrão Gemini 3.1), isso resulta em **~3KB por chunk**. Em um workspace com 100k chunks, são **~300MB apenas de vetores**. 
+No protótipo inicial, os embeddings eram armazenados como `float32` (4 bytes por dimensão). Para um vetor de 768 dimensões (Padrão Gemini 3.1), isso resulta em **~3KB por chunk**. Em um workspace com 100k chunks, são **~300MB apenas de vetores**.
 
 O **TurboQuant** (Padronizado em Abril 2026) demonstra que é possível comprimir representações vetoriais em até **90%** com perda mínima de precisão semântica, usando técnicas de rotação ortogonal e estabilização 1-bit. No Vectora, aplicamos isso diretamente no **USearch (HNSW)**.
 
@@ -11,6 +11,7 @@ O **TurboQuant** (Padronizado em Abril 2026) demonstra que é possível comprimi
 A implementação no Vectora segue uma pipeline de três estágios para garantir máxima fidelidade mesmo em compressão extrema.
 
 ### 1. Rotação Ortogonal (`internal/quant/rotation.go`)
+
 Esta etapa "espalha" a energia da informação de forma uniforme pelas dimensões, eliminando correlações que dificultariam a quantização escalar simples.
 
 ```go
@@ -60,7 +61,7 @@ func (r *OrthogonalRotator) Rotate(vector []float32) []float32 {
 // generateRandomOrthogonalMatrix cria uma matriz ortogonal usando o método de Gram-Schmidt.
 func generateRandomOrthogonalMatrix(dim int, seed int64) [][]float32 {
 	rng := rand.New(rand.NewSource(seed))
-	
+
 	matrix := make([][]float32, dim)
 	for i := 0; i < dim; i++ {
 		matrix[i] = make([]float32, dim)
@@ -76,7 +77,7 @@ func generateRandomOrthogonalMatrix(dim int, seed int64) [][]float32 {
 				matrix[i][k] -= dot * matrix[j][k]
 			}
 		}
-		
+
 		norm := float32(math.Sqrt(float64(dotProduct(matrix[i], matrix[i]))))
 		if norm > 1e-8 {
 			for k := 0; k < dim; k++ {
@@ -98,6 +99,7 @@ func dotProduct(v1, v2 []float32) float32 {
 ```
 
 ### 2. Estabilização QJL (`internal/quant/qjl.go`)
+
 Implementa o **Quantized Johnson-Lindenstrauss** para estabilizar as projeções de 1-bit antes do bit-packing.
 
 ```go
@@ -127,7 +129,7 @@ func NewQJLQuant(dim int, seed int64) *QJLQuant {
 // em projeções de baixa fidelidade (1-bit).
 func (q *QJLQuant) Stabilize(vector []float32) []float32 {
 	rng := rand.New(rand.NewSource(q.Seed))
-	
+
 	result := make([]float32, len(vector))
 	for i := range vector {
 		bias := (rng.Float32() * 2) - 1 // [-1, 1]
@@ -150,6 +152,7 @@ func (q *QJLQuant) PackBits(vector []float32) []byte {
 ```
 
 ### 3. Orquestrador TurboQuant (`internal/quant/turboquant.go`)
+
 Coordena a pipeline completa integrada ao store vetorial.
 
 ```go
@@ -224,6 +227,7 @@ func (t *TurboQuant) Decode(data []byte) ([]float32, error) {
 O TurboQuant é ativado seletivamente via preferências (`preferences.json`). Uma vez habilitado em um workspace, o `UsearchStore` aplica automaticamente a pipeline de 1-bit antes de inserir os vetores no índice HNSW.
 
 **Impacto:**
+
 - **Economia:** Embeddings de ~3KB reduzidos para **~96 bytes** (768 bits).
 - **Performance:** Busca Hamming extremamente rápida no espaço comprimido.
 - **Memória:** Redução de I/O em até 10x ao lidar com grandes knowledge bases.
