@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vectora
+  labels:
+    app: vectora
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vectora
+  template:
+    metadata:
+      labels:
+        app: vectora
+    spec:
+      containers:
+      - name: vectora
+        image: kaffyn/vectora:latest
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: vectora-config
+        - secretRef:
+            name: vectora-secrets
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: data
+          mountPath: /root/.Vectora
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: vectora-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vectora
+spec:
+  selector:
+    app: vectora
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

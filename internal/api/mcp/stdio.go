@@ -56,7 +56,7 @@ func NewStdioServerFromMCP(
 	toolRegistry := tools.NewRegistry("/", guardian, kvStore)
 
 	eng := engine.NewEngine(
-		vecStore.(*db.ChromemStore),
+		vecStore.(*db.UsearchStore),
 		kvStore.(*db.BBoltStore),
 		router,
 		toolRegistry,

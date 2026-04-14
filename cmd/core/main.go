@@ -18,6 +18,7 @@ import (
 
 	"github.com/Kaffyn/Vectora/internal/api/ipc"
 	"github.com/Kaffyn/Vectora/internal/api/mcp"
+	"github.com/Kaffyn/Vectora/internal/auth"
 	"github.com/Kaffyn/Vectora/internal/config/crypto"
 	"github.com/Kaffyn/Vectora/internal/storage/db"
 	"github.com/Kaffyn/Vectora/internal/core/engine"
@@ -476,6 +477,19 @@ func runCore() {
 	httpConfig.CORSAllowOrigins = []string{"*"}
 
 	httpServer := server.NewHTTPServer(httpConfig)
+	
+	// Setup Auth managers for Cloud-Native API
+	secretKey := cfg.SecretKey
+	if secretKey == "" {
+		secretKey = "default-unsafe-secret-key-change-me"
+		infra.Logger().Warn("VECTORA_SECRET_KEY not set. Using unsafe default.")
+	}
+	jwtManager := auth.NewJWTManager(secretKey, "Vectora-Daemon", 24*time.Hour, 7*24*time.Hour)
+	rbacManager := auth.NewRBACManager()
+	
+	// Register HTTP routes with TenantManager (Phase 4)
+	httpServer.RegisterRoutes(jwtManager, rbacManager, tenantMgr)
+	
 	if err := httpServer.Start(); err != nil {
 		infra.Logger().Error("Failed to start HTTP server", "error", err.Error())
 	}
@@ -538,7 +552,7 @@ func runModelsList() error {
 	return nil
 }
 
-func initCoreClientEngine(ctx context.Context, workspace string, vecStore *db.ChromemStore, kvStore *db.BBoltStore) *engine.Engine {
+func initCoreClientEngine(ctx context.Context, workspace string, vecStore *db.UsearchStore, kvStore *db.BBoltStore) *engine.Engine {
 	absPath, err := filepath.Abs(workspace)
 	if err != nil {
 		infra.Logger().Error("Rejecting ACP Connection: Invalid path", "path", workspace)

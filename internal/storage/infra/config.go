@@ -70,6 +70,7 @@ type Config struct {
 	MetaAPIKey            string
 	MetaBaseURL           string
 	MetaFallbackModel     string
+	SecretKey             string
 }
 
 // GetConfigPath returns the OS-standard path for the Vectora .env file.
@@ -155,6 +156,7 @@ func LoadConfig() *Config {
 		MetaAPIKey:            os.Getenv("META_API_KEY"),
 		MetaBaseURL:           os.Getenv("META_BASE_URL"),
 		MetaFallbackModel:     os.Getenv("META_FALLBACK_MODEL"),
+		SecretKey:             os.Getenv("VECTORA_SECRET_KEY"),
 	}
 }
 
@@ -257,6 +259,9 @@ func SaveConfig(cfg *Config) error {
 	}
 	if cfg.MetaFallbackModel != "" {
 		content += fmt.Sprintf("META_FALLBACK_MODEL=%s\n", cfg.MetaFallbackModel)
+	}
+	if cfg.SecretKey != "" {
+		content += fmt.Sprintf("VECTORA_SECRET_KEY=%s\n", cfg.SecretKey)
 	}
 
 	return os.WriteFile(envPath, []byte(content), 0600)

@@ -41,9 +41,9 @@ func JWTAuthMiddleware(jwtManager *auth.JWTManager) func(next http.Handler) http
 			}
 
 			// Adicionar claims ao context
-			ctx := context.WithValue(r.Context(), "claims", claims)
-			ctx = context.WithValue(ctx, "user_id", claims.UserID)
-			ctx = context.WithValue(ctx, "tenant_id", claims.TenantID)
+			ctx := context.WithValue(r.Context(), handlers.ClaimsKey, claims)
+			ctx = context.WithValue(ctx, handlers.UserIDKey, claims.UserID)
+			ctx = context.WithValue(ctx, handlers.TenantIDKey, claims.TenantID)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -63,15 +63,15 @@ func OptionalJWTMiddleware(jwtManager *auth.JWTManager) func(next http.Handler) 
 					tokenString := parts[1]
 					if claims, err := jwtManager.ValidateToken(tokenString); err == nil {
 						ctx = context.WithValue(ctx, "claims", claims)
-						ctx = context.WithValue(ctx, "user_id", claims.UserID)
-						ctx = context.WithValue(ctx, "tenant_id", claims.TenantID)
-						ctx = context.WithValue(ctx, "authenticated", true)
+						ctx = context.WithValue(ctx, handlers.UserIDKey, claims.UserID)
+						ctx = context.WithValue(ctx, handlers.TenantIDKey, claims.TenantID)
+						ctx = context.WithValue(ctx, handlers.AuthenticatedKey, true)
 					}
 				}
 			}
 
-			if _, ok := ctx.Value("authenticated").(bool); !ok {
-				ctx = context.WithValue(ctx, "authenticated", false)
+			if _, ok := ctx.Value(handlers.AuthenticatedKey).(bool); !ok {
+				ctx = context.WithValue(ctx, handlers.AuthenticatedKey, false)
 			}
 
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -157,25 +157,10 @@ func GetClaimsFromContext(r *http.Request) *auth.Claims {
 	return nil
 }
 
-// GetUserIDFromContext extrai user_id do context
-func GetUserIDFromContext(r *http.Request) string {
-	if userID, ok := r.Context().Value("user_id").(string); ok {
-		return userID
-	}
-	return ""
-}
-
-// GetTenantIDFromContext extrai tenant_id do context
-func GetTenantIDFromContext(r *http.Request) string {
-	if tenantID, ok := r.Context().Value("tenant_id").(string); ok {
-		return tenantID
-	}
-	return ""
-}
 
 // IsAuthenticated verifica se requisição está autenticada
 func IsAuthenticated(r *http.Request) bool {
-	if authenticated, ok := r.Context().Value("authenticated").(bool); ok {
+	if authenticated, ok := r.Context().Value(handlers.AuthenticatedKey).(bool); ok {
 		return authenticated
 	}
 	// Se tem claims, está autenticado

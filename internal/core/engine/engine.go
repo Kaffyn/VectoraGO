@@ -36,7 +36,7 @@ func getLanguageName(code string) string {
 
 // Engine is the central orchestrator for Vectora.
 type Engine struct {
-	Storage  *db.ChromemStore
+	Storage  *db.UsearchStore
 	KV       *db.BBoltStore
 	LLM      *llm.Router
 	Tools    *tools.Registry
@@ -47,7 +47,7 @@ type Engine struct {
 }
 
 func NewEngine(
-	vecStore *db.ChromemStore,
+	vecStore *db.UsearchStore,
 	kvStore *db.BBoltStore,
 	llmRouter *llm.Router,
 	toolsReg *tools.Registry,

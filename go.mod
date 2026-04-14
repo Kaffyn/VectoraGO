@@ -16,9 +16,9 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0
 	github.com/joho/godotenv v1.5.1
 	github.com/openai/openai-go v1.12.0
-	github.com/philippgille/chromem-go v0.7.0
 	github.com/pkoukk/tiktoken-go v0.1.6
 	github.com/spf13/cobra v1.10.2
+	github.com/unum-cloud/usearch/golang v0.0.0-20260216134828-40d127f472e9
 	go.etcd.io/bbolt v1.4.3
 	golang.org/x/sync v0.19.0
 	golang.org/x/sys v0.42.0

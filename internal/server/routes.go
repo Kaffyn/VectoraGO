@@ -4,16 +4,17 @@ import (
 	"net/http"
 
 	"github.com/Kaffyn/Vectora/internal/auth"
+	"github.com/Kaffyn/Vectora/internal/core/manager"
 	"github.com/Kaffyn/Vectora/internal/server/handlers"
 	"github.com/go-chi/chi/v5"
 )
 
 // RegisterRoutes registra todas as rotas REST da API
-func (hs *HTTPServer) RegisterRoutes(jwtManager *auth.JWTManager, rbacManager *auth.RBACManager) {
+func (hs *HTTPServer) RegisterRoutes(jwtManager *auth.JWTManager, rbacManager *auth.RBACManager, tenantMgr *manager.TenantManager) {
 	// Handlers
-	chatHandler := handlers.NewChatHandler()
-	planHandler := handlers.NewPlanHandler()
-	embedHandler := handlers.NewEmbedHandler()
+	chatHandler := handlers.NewChatHandler(tenantMgr)
+	planHandler := handlers.NewPlanHandler(tenantMgr)
+	embedHandler := handlers.NewEmbedHandler(tenantMgr)
 
 	// API v1 rotas
 	hs.router.Route("/api/v1", func(r chi.Router) {

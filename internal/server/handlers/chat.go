@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/Kaffyn/Vectora/internal/core/manager"
 )
 
 // ChatRequest representa uma requisição de chat
@@ -48,12 +50,14 @@ func (cr *ChatRequest) Validate() error {
 
 // ChatHandler processa requisições de chat
 type ChatHandler struct {
-	// TODO: Injetar dependências (Engine, Logger, etc)
+	tenantMgr *manager.TenantManager
 }
 
 // NewChatHandler cria um novo chat handler
-func NewChatHandler() *ChatHandler {
-	return &ChatHandler{}
+func NewChatHandler(tm *manager.TenantManager) *ChatHandler {
+	return &ChatHandler{
+		tenantMgr: tm,
+	}
 }
 
 // HandleChat processa POST /api/chat
@@ -72,26 +76,29 @@ func (h *ChatHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Validar que usuário tem acesso ao workspace
-	// TODO: Chamar engine.Query() para processar
-	// TODO: Registrar em conversation store
+	// Obtém o tenant para o workspace
+	tenant, err := h.tenantMgr.GetTenant(req.WorkspaceID)
+	if err != nil {
+		WriteError(w, http.StatusNotFound, fmt.Sprintf("workspace not found or not active: %v", err), requestID)
+		return
+	}
 
-	// Resposta mockada para testes
+	// Processa a query usando o engine do tenant
 	start := time.Now()
+	answer, model, err := tenant.Engine.Query(r.Context(), req.Query, req.WorkspaceID, "", "chat", "standard")
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("engine query failed: %v", err), requestID)
+		return
+	}
 
 	resp := ChatResponse{
-		Answer:         "This is a mock response. The actual engine integration will be in Phase 5.",
-		Model:          "claude-3.5-sonnet",
-		TokensUsed:     150,
-		ProcessingTime: time.Since(start).Milliseconds(),
-		Sources:        []string{"file1.go", "file2.go"},
+		Answer:         answer,
+		Model:          model,
+		TokensUsed:     0, // TODO: Obter do engine se disponível
+		ProcessingTime: float64(time.Since(start).Milliseconds()),
 	}
 
 	WriteJSON(w, http.StatusOK, resp, requestID)
-
-	// Log para debug
-	fmt.Printf("[%s] ChatHandler: user=%s workspace=%s query_len=%d\n",
-		requestID, userID, req.WorkspaceID, len(req.Query))
 }
 
 // HandleStreamChat processa POST /api/chat/stream com respostas em streaming

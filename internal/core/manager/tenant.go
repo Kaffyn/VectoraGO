@@ -12,6 +12,7 @@ import (
 	"github.com/Kaffyn/Vectora/internal/llm"
 	"github.com/Kaffyn/Vectora/internal/config/policies"
 	"github.com/Kaffyn/Vectora/internal/tools"
+	"github.com/Kaffyn/Vectora/internal/shared/ingestion"
 )
 
 // Tenant representa um workspace isolado no daemon singleton
@@ -125,15 +126,16 @@ func (tm *TenantManager) GetOrCreateTenant(wsID, wsRoot, projName string) (*Tena
 	// Inicializar Guardian para este tenant
 	tenant.Guardian = policies.NewGuardian(wsRoot)
 
-	// Inicializar Engine com o registro de ferramentas local
+	// Inicializar Engine com o registro de ferramentas local e indexador
 	toolRegistry := tools.NewRegistry(wsRoot, tenant.Guardian, tenant.KVStore)
+	indexer := ingestion.NewIndexer(tm.llmRouter.GetDefault(), tenant.Guardian)
 	tenant.Engine = engine.NewEngine(
 		vecStore,
 		kvStore,
 		tm.llmRouter,
 		toolRegistry,
 		tenant.Guardian,
-		nil,
+		indexer,
 	)
 
 	tm.activeTenants[wsID] = tenant

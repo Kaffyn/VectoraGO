@@ -38,6 +38,7 @@ func CalculateHash(content string) string {
 // VectorStore provides an abstraction for the Vector Database (Chromem-go).
 type VectorStore interface {
 	UpsertChunk(ctx context.Context, collection string, chunk Chunk) error
+	UpsertChunks(ctx context.Context, collection string, chunks []Chunk) error
 	Query(ctx context.Context, collection string, queryVector []float32, topK int) ([]ScoredChunk, error)
 	DeleteCollection(ctx context.Context, collection string) error
 	CollectionExists(ctx context.Context, collection string) bool

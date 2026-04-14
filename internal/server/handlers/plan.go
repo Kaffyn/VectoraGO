@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/Kaffyn/Vectora/internal/core/manager"
 )
 
 // PlanRequest representa uma requisição para gerar um plano
@@ -62,12 +64,14 @@ func (pr *PlanRequest) Validate() error {
 
 // PlanHandler processa requisições de planejamento
 type PlanHandler struct {
-	// TODO: Injetar dependências
+	tenantMgr *manager.TenantManager
 }
 
 // NewPlanHandler cria um novo plan handler
-func NewPlanHandler() *PlanHandler {
-	return &PlanHandler{}
+func NewPlanHandler(tm *manager.TenantManager) *PlanHandler {
+	return &PlanHandler{
+		tenantMgr: tm,
+	}
 }
 
 // HandleCreatePlan processa POST /api/plan
@@ -86,49 +90,33 @@ func (h *PlanHandler) HandleCreatePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Chamar engine para gerar plano
-	// Mock response para testes
+	// Obtém o tenant para o workspace
+	tenant, err := h.tenantMgr.GetTenant(req.WorkspaceID)
+	if err != nil {
+		WriteError(w, http.StatusNotFound, fmt.Sprintf("workspace %s not found", req.WorkspaceID), requestID)
+		return
+	}
+
+	// Chamar engine para gerar plano (usando modo planning)
+	answer, model, err := tenant.Engine.Query(r.Context(), req.Description, req.WorkspaceID, "", "planning", "standard")
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("failed to generate plan: %v", err), requestID)
+		return
+	}
+
+	// Como a resposta do engine é uma string (markdown ou texto), precisamos converter
+	// para o formato estruturado do PlanResponse se possível, ou apenas retornar o texto.
+	// Por agora, retornamos o texto como descrição e steps vazios (ou parseados).
 	resp := PlanResponse{
-		ID:    "plan_" + requestID[:8],
-		Title: "Implementation Plan",
-		Description: req.Description,
-		Steps: []PlanStep{
-			{
-				ID:            "step_1",
-				Title:         "Analysis",
-				Description:   "Analyze requirements",
-				Status:        "pending",
-				EstimatedTime: 30,
-				RiskLevel:     "low",
-			},
-			{
-				ID:            "step_2",
-				Title:         "Implementation",
-				Description:   "Implement solution",
-				Status:        "pending",
-				Dependencies:  []string{"step_1"},
-				EstimatedTime: 120,
-				RiskLevel:     "medium",
-			},
-			{
-				ID:            "step_3",
-				Title:         "Testing",
-				Description:   "Test implementation",
-				Status:        "pending",
-				Dependencies:  []string{"step_2"},
-				EstimatedTime: 60,
-				RiskLevel:     "low",
-			},
-		},
-		EstimatedTime: 210,
-		Complexity:    "medium",
-		GeneratedAt:   time.Now(),
+		ID:          "plan_" + requestID[:8],
+		Title:       "Generated Plan",
+		Description: answer,
+		Complexity:  "medium",
+		GeneratedAt: time.Now(),
+		Steps:       []PlanStep{}, // TODO: Implementar parser de markdown para steps
 	}
 
 	WriteJSON(w, http.StatusCreated, resp, requestID)
-
-	fmt.Printf("[%s] PlanHandler: user=%s description_len=%d\n",
-		requestID, userID, len(req.Description))
 }
 
 // HandleGetPlan retorna um plano específico

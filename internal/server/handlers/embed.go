@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"context"
+
+	"github.com/Kaffyn/Vectora/internal/core/manager"
+	"github.com/Kaffyn/Vectora/internal/core/engine"
 )
 
 // EmbedRequest representa uma requisição para embeddings
@@ -56,12 +60,14 @@ func (er *EmbedRequest) Validate() error {
 
 // EmbedHandler processa requisições de embedding
 type EmbedHandler struct {
-	// TODO: Injetar dependências (Embedder, Logger, etc)
+	tenantMgr *manager.TenantManager
 }
 
 // NewEmbedHandler cria um novo embed handler
-func NewEmbedHandler() *EmbedHandler {
-	return &EmbedHandler{}
+func NewEmbedHandler(tm *manager.TenantManager) *EmbedHandler {
+	return &EmbedHandler{
+		tenantMgr: tm,
+	}
 }
 
 // HandleStartEmbed processa POST /api/embed/start
@@ -80,21 +86,56 @@ func (h *EmbedHandler) HandleStartEmbed(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// TODO: Validar que usuário tem acesso ao workspace
-	// TODO: Iniciar embedding job assincronamente
-	// TODO: Retornar job ID para polling de progresso
+	// Obtém o tenant para o workspace
+	tenant, err := h.tenantMgr.GetTenant(req.WorkspaceID)
+	if err != nil {
+		// Tenta criar se não existir (ou se for o primeiro acesso via API)
+		// Para simplicidade, assumimos que o root é o diretório atual se não passado?
+		// Na realidade, o workspace deve ser pré-registrado.
+		WriteError(w, http.StatusNotFound, fmt.Sprintf("workspace %s not found", req.WorkspaceID), requestID)
+		return
+	}
 
-	// Mock response para testes
+	provider := tenant.Engine.LLM.GetDefault()
+	if provider == nil || !provider.IsConfigured() {
+		WriteError(w, http.StatusPreconditionFailed, "LLM provider not configured for this tenant", requestID)
+		return
+	}
+
+	// Inicia embedding job assincronamente (semelhante ao IPC)
+	jobID := "embed_job_" + requestID[:8]
+	
+	// Root path default para o root do tenant se não especificado
+	rootPath := tenant.Root
+	if len(req.Paths) > 0 {
+		rootPath = req.Paths[0] // Simplificação: processa o primeiro path
+	}
+
+	go engine.RunEmbedJob(
+		context.Background(),
+		engine.EmbedJobConfig{
+			RootPath:       rootPath,
+			Include:        req.Include,
+			Exclude:        req.Exclude,
+			Workspace:      tenant.ID,
+			Force:          req.Force,
+			CollectionName: "ws_" + tenant.ID, // TODO: Use salter hash if needed
+		},
+		tenant.KVStore,
+		tenant.VectorStore,
+		provider,
+		func(prog engine.EmbedProgress) {
+			// TODO: Store progress in a job store for polling
+		},
+	)
+
 	resp := EmbedResponse{
-		JobID:       "embed_job_" + requestID[:8],
-		Status:      "queued",
-		StartedAt:   time.Now(),
+		JobID:     jobID,
+		Status:    "processing",
+		StartedAt: time.Now(),
 	}
 
 	WriteJSON(w, http.StatusAccepted, resp, requestID)
-
-	fmt.Printf("[%s] EmbedHandler: user=%s workspace=%s paths=%d\n",
-		requestID, userID, req.WorkspaceID, len(req.Paths))
 }
 
 // HandleEmbedProgress processa GET /api/embed/progress
@@ -173,25 +214,41 @@ func (h *EmbedHandler) HandleSearchEmbeddings(w http.ResponseWriter, r *http.Req
 		topK = 10
 	}
 
-	// TODO: Executar busca semântica no vector store
-	mockResults := []map[string]interface{}{
-		{
-			"file":      "internal/auth/jwt.go",
-			"line":      42,
-			"content":   "GenerateToken creates a new JWT token",
-			"relevance": 0.95,
-		},
-		{
-			"file":      "internal/server/http.go",
-			"line":      15,
-			"content":   "HTTPServer struct with router",
-			"relevance": 0.87,
-		},
+	// Obtém o tenant para o workspace
+	tenant, err := h.tenantMgr.GetTenant(searchReq.WorkspaceID)
+	if err != nil {
+		WriteError(w, http.StatusNotFound, fmt.Sprintf("workspace %s not found", searchReq.WorkspaceID), requestID)
+		return
+	}
+
+	// 1. Gera embedding da query
+	queryVector, err := tenant.Engine.Embed(r.Context(), searchReq.Query, "")
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("failed to generate query embedding: %v", err), requestID)
+		return
+	}
+
+	// 2. Busca no vector store (coleção ws_ID)
+	scoredChunks, err := tenant.VectorStore.Query(r.Context(), "ws_"+tenant.ID, queryVector, topK)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("vector store query failed: %v", err), requestID)
+		return
+	}
+
+	// 3. Formata resultados
+	results := make([]map[string]interface{}, 0, len(scoredChunks))
+	for _, sc := range scoredChunks {
+		results = append(results, map[string]interface{}{
+			"id":        sc.ID,
+			"content":   sc.Content,
+			"metadata":  sc.Metadata,
+			"relevance": sc.Score,
+		})
 	}
 
 	WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"results": mockResults,
-		"count":   len(mockResults),
+		"results": results,
+		"count":   len(results),
 		"query":   searchReq.Query,
 	}, requestID)
 }

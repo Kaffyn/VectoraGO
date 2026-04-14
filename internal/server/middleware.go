@@ -20,7 +20,7 @@ func RequestIDMiddleware(headerName string) func(next http.Handler) http.Handler
 			}
 
 			// Adicionar ao context e header
-			ctx := context.WithValue(r.Context(), "request_id", requestID)
+			ctx := context.WithValue(r.Context(), handlers.RequestIDKey, requestID)
 			w.Header().Set(headerName, requestID)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
