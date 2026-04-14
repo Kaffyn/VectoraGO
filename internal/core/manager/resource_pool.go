@@ -17,6 +17,9 @@ type ResourcePool struct {
 	// Semáforos por tenant para LLM calls
 	llmSemaphores map[string]*semaphore.Weighted
 
+	// Circuit breaker state per tenant
+	circuitBreakers map[string]*CircuitBreakerState
+
 	// Fila de prioridade para tarefas de indexação
 	indexQueue *PriorityQueue
 
@@ -58,6 +61,28 @@ type TenantStats struct {
 	ErrorCount  int
 }
 
+// CircuitBreakerState rastreia o estado do circuit breaker per tenant
+type CircuitBreakerState struct {
+	State          string    // "closed", "open", "half-open"
+	FailureCount   int       // Contagem de falhas consecutivas
+	LastFailure    time.Time // Última vez que falhou
+	LastSuccess    time.Time // Última vez que sucedeu
+	OpenedAt       time.Time // Quando foi aberto
+	SuccessAfterOpen int      // Sucessos após abrir (para half-open)
+}
+
+const (
+	CircuitClosed   = "closed"
+	CircuitOpen     = "open"
+	CircuitHalfOpen = "half-open"
+
+	FailureThreshold        = 5              // Abrir circuit after N failures
+	SuccessThresholdHalfOpen = 3              // Fechar circuit after N successes em half-open
+	CircuitResetTimeout     = 30 * time.Second // Tempo para tentar recuperar
+	InitialBackoffDuration  = 100 * time.Millisecond
+	MaxBackoffDuration      = 30 * time.Second
+)
+
 // NewResourcePool cria uma nova instância do resource pool
 func NewResourcePool(config ResourceConfig) *ResourcePool {
 	// Validar valores padrão
@@ -72,7 +97,8 @@ func NewResourcePool(config ResourceConfig) *ResourcePool {
 	}
 
 	return &ResourcePool{
-		llmSemaphores: make(map[string]*semaphore.Weighted),
+		llmSemaphores:   make(map[string]*semaphore.Weighted),
+		circuitBreakers: make(map[string]*CircuitBreakerState),
 		indexQueue: &PriorityQueue{
 			items:       make([]*IndexTask, 0),
 			semaphore:   semaphore.NewWeighted(int64(config.MaxConcurrentIndexing)),
@@ -213,4 +239,134 @@ func (rp *ResourcePool) ResetTenantStats(tenantID string) {
 	defer rp.indexQueue.mu.Unlock()
 
 	delete(rp.indexQueue.tenantStats, tenantID)
+}
+
+// GetCircuitBreakerState retorna o estado do circuit breaker para um tenant
+func (rp *ResourcePool) GetCircuitBreakerState(tenantID string) *CircuitBreakerState {
+	rp.mu.RLock()
+	defer rp.mu.RUnlock()
+
+	state, exists := rp.circuitBreakers[tenantID]
+	if !exists {
+		return &CircuitBreakerState{State: CircuitClosed}
+	}
+	return state
+}
+
+// RecordLLMSuccess registra uma chamada LLM bem-sucedida
+// Reseta contadores de falha se circuit estava aberto
+func (rp *ResourcePool) RecordLLMSuccess(tenantID string) {
+	rp.mu.Lock()
+	defer rp.mu.Unlock()
+
+	state, exists := rp.circuitBreakers[tenantID]
+	if !exists {
+		state = &CircuitBreakerState{State: CircuitClosed}
+		rp.circuitBreakers[tenantID] = state
+	}
+
+	state.LastSuccess = time.Now()
+
+	if state.State == CircuitHalfOpen {
+		state.SuccessAfterOpen++
+		if state.SuccessAfterOpen >= SuccessThresholdHalfOpen {
+			// Fechar circuit após sucessos em half-open
+			state.State = CircuitClosed
+			state.FailureCount = 0
+			state.SuccessAfterOpen = 0
+		}
+	} else if state.State == CircuitClosed {
+		// Manter contadores baixos em circuito fechado
+		if state.FailureCount > 0 {
+			state.FailureCount--
+		}
+	}
+}
+
+// RecordLLMFailure registra uma falha de chamada LLM
+// Abre circuit se threshold atingido
+func (rp *ResourcePool) RecordLLMFailure(tenantID string) {
+	rp.mu.Lock()
+	defer rp.mu.Unlock()
+
+	state, exists := rp.circuitBreakers[tenantID]
+	if !exists {
+		state = &CircuitBreakerState{State: CircuitClosed}
+		rp.circuitBreakers[tenantID] = state
+	}
+
+	state.LastFailure = time.Now()
+	state.FailureCount++
+
+	if state.State == CircuitClosed && state.FailureCount >= FailureThreshold {
+		// Abrir circuit após falhas consecutivas
+		state.State = CircuitOpen
+		state.OpenedAt = time.Now()
+		state.SuccessAfterOpen = 0
+	} else if state.State == CircuitHalfOpen {
+		// Reabrir circuit se falha em half-open
+		state.State = CircuitOpen
+		state.OpenedAt = time.Now()
+		state.SuccessAfterOpen = 0
+	}
+}
+
+// CanMakeLLMCall verifica se pode fazer chamada LLM baseado no circuit breaker
+// Retorna (canCall, backoffDuration, err)
+func (rp *ResourcePool) CanMakeLLMCall(tenantID string) (bool, time.Duration, error) {
+	rp.mu.RLock()
+	state, exists := rp.circuitBreakers[tenantID]
+	if !exists {
+		state = &CircuitBreakerState{State: CircuitClosed}
+		rp.circuitBreakers[tenantID] = state
+	}
+	rp.mu.RUnlock()
+
+	switch state.State {
+	case CircuitClosed:
+		// Sempre pode chamar quando fechado
+		return true, 0, nil
+
+	case CircuitOpen:
+		// Verificar se pode tentar half-open
+		timeSinceOpen := time.Since(state.OpenedAt)
+		if timeSinceOpen > CircuitResetTimeout {
+			// Tempo de tentar recuperar
+			rp.mu.Lock()
+			state.State = CircuitHalfOpen
+			state.SuccessAfterOpen = 0
+			rp.mu.Unlock()
+			return true, 0, nil
+		}
+
+		// Circuit aberto, calcular backoff exponencial
+		backoff := calculateExponentialBackoff(state.FailureCount)
+		return false, backoff, fmt.Errorf("circuit breaker open for tenant %s", tenantID)
+
+	case CircuitHalfOpen:
+		// Permitir tentativas limitadas em half-open
+		return true, 0, nil
+
+	default:
+		return true, 0, nil
+	}
+}
+
+// calculateExponentialBackoff calcula duração de backoff baseada em contagem de falhas
+func calculateExponentialBackoff(failureCount int) time.Duration {
+	if failureCount <= 0 {
+		return InitialBackoffDuration
+	}
+
+	// 2^(failureCount-1) * initialDuration
+	backoff := InitialBackoffDuration
+	for i := 1; i < failureCount; i++ {
+		backoff *= 2
+		if backoff > MaxBackoffDuration {
+			backoff = MaxBackoffDuration
+			break
+		}
+	}
+
+	return backoff
 }
