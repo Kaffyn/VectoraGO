@@ -31,19 +31,19 @@ TurboQuant não é um "formato transparente". Ele exige **controle fino** em mú
 │ Size: 6144 bytes                                        │
 └────────────────────┬────────────────────────────────────┘
                      │
-        ┌────────────▼────────────┐
-        │ TurboQuant Compress     │
-        │ Stage 1: PolarQuant     │ ← Precisa armazenar matriz R
-        │ Stage 2: QJL 1-bit      │ ← Precisa armazenar matriz G
-        └────────────┬────────────┘
-                     │
+         ┌────────────▼────────────┐
+         │ TurboQuant Compress     │
+         │ Stage 1: Orthogonal Rot │ ← Balance variance (Spread)
+         │ Stage 2: QJL 1-bit Stab │ ← 1% bias stabilization
+         │ Stage 3: Bit Packing    │ ← Final bits (0/1)
+         └────────────┬────────────┘
+                      │
 ┌────────────────────▼────────────────────────────────────┐
 │ Vetor Comprimido                                        │
 ├─────────────────────────────────────────────────────────┤
-│ [k_packed:48B] + [v_packed:64B] + [k_signs:16B]        │
-│ + [v_signs:16B] + [k_radius:4B] + [v_radius:4B]        │
+│ [bit_packed_payload: 96 bytes (768 bits)]               │
 │ + [metadata:varies]                                     │
-│ Total: ~150-200 bytes                                   │
+│ Total: ~120-150 bytes (incl. overhead)                  │
 └────────────────────┬────────────────────────────────────┘
                      │
         ┌────────────▼────────────┐
@@ -112,12 +112,8 @@ type TurboQuantState struct {
     Version        uint32          // 4 bytes
 
     // Parte 2: Compressed Vectors (muitos, por doc)
-    CompressedK    []uint8         // 48 bytes per head
-    CompressedV    []uint8         // 64 bytes per head
-    KSignBits      bitset.BitSet   // 16 bytes per head
-    VSignBits      bitset.BitSet   // 16 bytes per head
-    KRadius        float32         // 4 bytes
-    VRadius        float32         // 4 bytes
+    CompressedPayload []uint8         // 96 bytes for 768d (1-bit)
+    IsQuantized       bool            // 1 byte
 
     // Parte 3: Metadata (precisa ser separado ou inline?)
     Timestamp      int64           // 8 bytes

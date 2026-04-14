@@ -136,13 +136,13 @@ index.SetMetric(func(a, b []float32) float32 {
 // Fluxo ideal para Vectora:
 
 // 1. Compress embedding
-compressed := turboQuant.Compress(embedding)  // []uint8, 150 bytes
+compressed := turboQuant.Encode(embedding)  // []byte, 96 bytes (768 bits)
 
 // 2. Criar índice com scalar quantizado
 index := usearch.NewIndex(
-    usearch.MetricKind.Cos,
-    usearch.ScalarKind.U8,  // ← U8 para TurboQuant output
-    128,
+    usearch.MetricKind.Hamming, // Para TurboQuant bits
+    usearch.ScalarKind.B1,      // 1-bit
+    768,
 )
 
 // 3. Add compressed

@@ -27,16 +27,16 @@ O arquivo `vectora.md` detalha a arquitetura correta: **3 camadas** (Core Daemon
 1. **Migração usearch-go**
    - Remover `github.com/philippgille/chromem-go` de `go.mod`
    - Adicionar `github.com/unum-cloud/usearch-go` (v0.2.0+)
-   - Refatorar `core/db/vector.go` → `internal/storage/vector.go` (nova estrutura)
+   - Refatorar `core/db/vector.go` → `internal/storage/db/vector.go` (nova estrutura)
    - Implementar abstração HNSW com `AddVector()`, `SearchVector()`
-   - Suporte a 6+ métricas (cosine, L2, IP, dot, custom)
+   - Suporte a 6+ métricas (cosine, L2, IP, dot, custom, Hamming/Hamming-TurboQuant)
 
 2. **TurboQuant Implementation**
    - `internal/quant/turboquant.go` (orquestrador)
    - `internal/quant/polar.go` (PolarQuant stage: rotation + angle extraction)
    - `internal/quant/qjl.go` (QJL correction: 1-bit bias stabilization)
-   - `internal/quant/codebook.go` (Lloyd-Max codebooks + quantization)
-   - Teste com KV cache compression (embedding → 150-200 bytes)
+   - `internal/quant/rotation.go` (Orthogonal rotation: Spread information energy)
+   - Teste com KV cache compression (embedding → 96-200 bytes)
 
 3. **Storage Layer Tests**
    - Unit tests: usearch initialization, add, search, serialize
