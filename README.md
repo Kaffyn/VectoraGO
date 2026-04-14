@@ -27,7 +27,8 @@ Result: answers based on how the system actually works — not just on isolated 
 - **Codebase-Aware:** Understands real relationships between modules and files
 - **Real Multi-hop:** Navigates multiple points in the system to answer complex questions
 - **Agentic Execution:** Acts on code with context and safety
-- **TurboQuant (Beta):** Extreme vector compression for memory efficiency
+- **TurboQuant:** Extreme vector compression for memory efficiency
+- **Premium TUI (Charmland):** Immersive CLI Command Center with rich visuals and interactive wizards
 - **Total Privacy:** Data and embeddings stay local
 - **Flexible Hosting:** Run locally for free (BYO Keys) or as a managed Service (AI Credits)
 

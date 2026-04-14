@@ -69,7 +69,7 @@ O arquivo `vectora.md` detalha a arquitetura correta: **3 camadas** (Core Daemon
    internal/auth/ → JWT + RBAC
    internal/mcp/ → MCP server impl (já existe parcialmente)
    internal/config/ → Config loading
-   internal/telemetry/ → OpenTelemetry + zerolog
+   internal/telemetry/ → OpenTelemetry + charm log
    internal/safety/ → Sanitizer + Sandbox
    ```
 
@@ -225,10 +225,12 @@ O arquivo `vectora.md` detalha a arquitetura correta: **3 camadas** (Core Daemon
    - Connect to Service mode (WebSocket) como fallback
    - Chat panel, memory browser, plan viewer (webviews)
 
-2. **CLI Enhancements**
+2. **CLI Enhancements (Charmland)**
    - Cobra commands: `chat`, `ask`, `embed`, `plan`, `harness`
-   - Bubbletea TUI: interactive chat, plan visualization
-   - Glamour: markdown rendering para respostas
+   - **Bubbletea Command Center**: dashboard imersivo para monitorar o daemon.
+   - **Huh? Forms**: Gestão de configuração e API Keys via wizard.
+   - **Lipgloss Styler**: Identidade visual (Indigo/Purple) unificada.
+   - **Glamour**: markdown rendering para respostas com syntax highlighting.
 
 3. **Config Management**
    - YAML config file

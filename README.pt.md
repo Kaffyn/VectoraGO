@@ -27,8 +27,9 @@ Resultado: respostas baseadas em como o sistema realmente funciona — não apen
 - **Codebase-Aware:** Entende relações reais entre módulos e arquivos
 - **Multi-hop Real:** Navega múltiplos pontos do sistema para responder perguntas complexas
 - **Execução Agêntica:** Atua sobre o código com contexto e segurança
-- **TurboQuant (Beta):** Compressão extrema de vetores para eficiência de memória
-- **Privacidade Total:** Dados e embeddings permanecem locais
+- **TurboQuant:** Compressão extrema de vetores para eficiência de memória
+- **TUI Premium (Charmland):** CLI Command Center imersivo com visuais ricos e wizards interativos
+- **Privacidade Total:** Seus dados e embeddings não saem da sua máquina
 - **Hospedagem Flexível:** Rode localmente grátis (BYO Keys) ou como um Serviço gerenciado (Créditos de IA)
 
 ---

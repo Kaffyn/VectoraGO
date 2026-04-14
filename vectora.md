@@ -98,6 +98,8 @@ require (
     github.com/charmbracelet/glamour v0.10.0       // Markdown rendering
     github.com/charmbracelet/bubbles v0.18.0       // UI components
     github.com/charmbracelet/lipgloss v0.10.0      // Styling
+    github.com/charmbracelet/huh v1.0.0            // Interactive forms
+    github.com/charmbracelet/log v1.0.0            // Structured logging
     github.com/alecthomas/chroma v2.13.0           // Code syntax highlighting
 
     // Tray & UI (Wails Stack)
@@ -1538,9 +1540,17 @@ func generateGaussianMatrix(seed int64, headDim int) *mat.Dense {
 
 <a name="cli"></a>
 
-## 8. CLI & Resposta (Bubbletea + Glamour)
+## 8. CLI & Resposta (Bubbletea + Glamour + Lip Gloss)
 
-### 8.1 Chat Command
+A interface de linha de comando (CLI) do Vectora não é apenas um utilitário, mas um **Command Center** completo baseado no ecossistema Charm.
+
+### 8.1 Dashboard Unificada
+Utilizamos `bubbletea` para orquestrar múltiplas visões e `lipgloss` para criar um layout com bordas, títulos e áreas de status (tokens, latência, provedor ativo).
+
+### 8.2 Configuração Interativa (Huh?)
+A gestão de chaves de API e configurações do daemon é feita via `huh.Form`, proporcionando uma experiência guiada (wizard) em vez de edição manual de arquivos.
+
+### 8.3 Chat Command
 
 ```go
 // cmd/vectora/cmd_chat.go
@@ -2145,7 +2155,12 @@ func RecordToolExecution(toolName string, latency float64) {
 }
 ```
 
-### 14.2 Structured Logging (zerolog)
+### 14.2 Structured Logging (Charm Log)
+
+O Vectora utiliza `github.com/charmbracelet/log` para garantir observabilidade em todos os ambientes:
+
+- **Desenvolvimento**: Formatação "pretty" com cores, timestamps legíveis e níveis de log intuitivos.
+- **Produção (K8s)**: Saída JSON estruturada para ingestão automática em ELK/Loki, incluindo campos como `request_id` e `tenant_id`.
 
 ```go
 // internal/telemetry/logs.go
@@ -2372,7 +2387,7 @@ spec:
 | **CLI**                | cobra + bubbletea + glamour (markdown rendering)                   |
 | **Segurança**          | .vectoraignore/.embedignore, tool sandbox, audit log               |
 | **Git**                | go-git (local), GitHub API (PR automation)                         |
-| **Telemetry**          | OpenTelemetry + zerolog (structured JSON)                          |
+| **Telemetry**          | OpenTelemetry + Charm Log (JSON em Prod)                          |
 | **Deployment**         | Docker < 20MB, Kubernetes-ready, cross-platform                    |
 | **Developer Velocity** | Rápido: SDKs oficiais, single binary, sem runtime                  |
 | **Escalabilidade**     | goroutines nativas → 10k+ concurrent users                         |

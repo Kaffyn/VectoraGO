@@ -10,7 +10,7 @@ Este documento serve como referência técnica centralizada para a implementaç�
 - **KV Store**: `bbolt` v1.3.11 (BoltDB)
 - **Quantização**: TurboQuant (PolarQuant + QJL)
 - **Protocolos**: MCP (Model Context Protocol), JSON-RPC 2.0, WebSocket
-- **Observabilidade**: OpenTelemetry + zerolog
+- **Observabilidade**: OpenTelemetry + Charm Log (JSON em Prod)
 
 ## Arquitetura de 3 Camadas
 
@@ -18,7 +18,7 @@ Este documento serve como referência técnica centralizada para a implementaç�
 
 Processo leve, orquestrador de agentes, execução de ferramentas em sandbox, suporte a IPC via Unix Sockets/Named Pipes.
 
-- **Entrada**: CLI (cobra/bubbletea) ou MCP stdio.
+- **Entrada**: CLI Dashboard (Cobra + Bubbletea) ou MCP stdio.
 - **Persistência**: `~/.vectora/db/` (conversations.db e embeddings.db).
 
 ### 2. Service (Cloud-Native)
