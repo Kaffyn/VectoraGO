@@ -242,7 +242,34 @@ O arquivo `vectora.md` detalha a arquitetura correta: **3 camadas** (Core Daemon
 
 ---
 
-### FASE 8: Documentation + Release
+### FASE 8: Charm Implementation (TUI & Logging)
+
+**Objetivo:** Implementar a interface premium e o sistema de logging de produção.
+
+**Tarefas:**
+
+1. **Production Logging (charmbracelet/log)**
+   - Implementar `internal/logger` usando Charm Log.
+   - Suporte a modo `JSON` automático quando detectado ambiente Kubernetes.
+   - Enriquecimento de logs com `trace_id` e `tenant_id`.
+
+2. **CLI Command Center (Bubble Tea + Lip Gloss)**
+   - Criar dashboard imersivo com painéis de status e atividade.
+   - Implementar layout adaptativo com `lipgloss`.
+   - Integração de `bubbles/viewport` para scroll infinito no chat.
+
+3. **Universal Config Wizard (Huh?)**
+   - Refatorar comando `vectora config` para usar `huh`.
+   - Validação de chaves de API em tempo real durante o setup.
+
+4. **Rich Rendering (Glamour)**
+   - Integrar renderização Markdown em todo o fluxo de saída do agente.
+
+**Deliverable:** TUI profissional, configuração guiada e logs infra-ready.
+
+---
+
+### FASE 9: Documentation + Release
 
 **Objetivo:** Documentação completa, release 1.0
 
@@ -281,8 +308,9 @@ O arquivo `vectora.md` detalha a arquitetura correta: **3 camadas** (Core Daemon
 | **5**     | Docker + Kubernetes     | 1-2               | Sim (paralelo com fase 4)   |
 | **6**     | Harness System          | 1-2               | Sim (paralelo com fase 5)   |
 | **7**     | VSCode + CLI Polish     | 1-2               | Sim                         |
-| **8**     | Documentation + Release | 1                 | Final                       |
-| **TOTAL** |                         | **10-14 semanas** | com paralelização           |
+| **8**     | Charm (TUI & Log)       | 1-2               | Sim                         |
+| **9**     | Documentation + Release | 1                 | Final                       |
+| **TOTAL** |                         | **11-16 semanas** | com paralelização           |
 
 ---
 
@@ -324,11 +352,11 @@ kubectl get pods -w
 # Fase 6: Harness
 vectora harness run
 
-# Fase 7: CLI/Extension
-vectora chat "what is 2+2?"
-# VSCode: Ctrl+Shift+P → Vectora: Chat
+# Fase 8: Charm
+vectora dashboard
+vectora config
 
-# Fase 8: Release
+# Fase 9: Release
 git tag v1.0.0
 gh release create v1.0.0
 ```
