@@ -38,8 +38,9 @@ func NewExecutor(registry *Registry) *Executor {
 	}
 }
 
-// ExecuteParallel executes multiple tool calls concurrently, respecting dependencies
-// Returns a map of tool ID -> result
+// ExecuteParallel executes multiple tool calls concurrently
+// For tools without dependencies, runs them in parallel
+// For tools with dependencies, respects the dependency order
 func (e *Executor) ExecuteParallel(ctx context.Context, executions []ToolExecution) map[string]*ToolExecutionResult {
 	if len(executions) == 0 {
 		return make(map[string]*ToolExecutionResult)
@@ -53,60 +54,57 @@ func (e *Executor) ExecuteParallel(ctx context.Context, executions []ToolExecuti
 		}
 	}
 
-	// Multiple tools: use worker pool with dependency tracking
+	// For simplicity and thread-safety: if any tool has dependencies, use sequential
+	hasDependencies := false
+	for _, exec := range executions {
+		if len(exec.DependsOn) > 0 {
+			hasDependencies = true
+			break
+		}
+	}
+
+	if hasDependencies {
+		return e.ExecuteSequential(ctx, executions)
+	}
+
+	// No dependencies: execute all tools concurrently with semaphore limiting
 	results := make(map[string]*ToolExecutionResult)
 	resultsMutex := sync.Mutex{}
-	resultQueue := make(chan *ToolExecutionResult, len(executions))
-
-	// Build dependency graph
-	depGraph := buildDependencyGraph(executions)
-	ready := getReadyExecutions(executions, depGraph, results)
 
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, e.maxWorkers) // Limit concurrent executions
 
-	// Result collection goroutine
-	go func() {
-		for result := range resultQueue {
-			resultsMutex.Lock()
-			results[result.ID] = result
-			resultsMutex.Unlock()
-
-			// Check if new executions are now ready
-			newReady := getReadyExecutions(executions, depGraph, results)
-			for _, exec := range newReady {
-				wg.Add(1)
-				go func(execution ToolExecution) {
-					defer wg.Done()
-					semaphore <- struct{}{}        // Acquire semaphore
-					defer func() { <-semaphore }() // Release semaphore
-					resultQueue <- e.executeSingle(ctx, execution)
-				}(exec)
-			}
-		}
-	}()
-
-	// Initial worker pool for tools with no dependencies
-	for _, exec := range ready {
+	for _, exec := range executions {
 		wg.Add(1)
 		go func(execution ToolExecution) {
 			defer wg.Done()
+
+			select {
+			case <-ctx.Done():
+				cancelResult := &ToolExecutionResult{
+					ID:      execution.ID,
+					IsError: true,
+					Error:   ctx.Err(),
+					Output:  ctx.Err().Error(),
+				}
+				resultsMutex.Lock()
+				results[execution.ID] = cancelResult
+				resultsMutex.Unlock()
+				return
+			default:
+			}
+
 			semaphore <- struct{}{}        // Acquire semaphore
 			defer func() { <-semaphore }() // Release semaphore
-			resultQueue <- e.executeSingle(ctx, execution)
+
+			result := e.executeSingle(ctx, execution)
+			resultsMutex.Lock()
+			results[execution.ID] = result
+			resultsMutex.Unlock()
 		}(exec)
 	}
 
-	// Wait for all workers to complete and close result queue
-	go func() {
-		wg.Wait()
-		close(resultQueue)
-	}()
-
-	// Drain result queue (already collecting in the goroutine above)
-	for range resultQueue {
-	}
-
+	wg.Wait()
 	return results
 }
 
