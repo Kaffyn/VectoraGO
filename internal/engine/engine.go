@@ -7,13 +7,13 @@ import (
 
 	"strings"
 
-	"github.com/Kaffyn/Vectora/core/api/acp"
-	"github.com/Kaffyn/Vectora/core/db"
-	"github.com/Kaffyn/Vectora/core/infra"
-	"github.com/Kaffyn/Vectora/core/ingestion"
-	"github.com/Kaffyn/Vectora/core/llm"
-	"github.com/Kaffyn/Vectora/core/policies"
-	"github.com/Kaffyn/Vectora/core/tools"
+	"github.com/Kaffyn/Vectora/internal/api/acp"
+	"github.com/Kaffyn/Vectora/internal/db"
+	"github.com/Kaffyn/Vectora/internal/infra"
+	"github.com/Kaffyn/Vectora/internal/ingestion"
+	"github.com/Kaffyn/Vectora/internal/llm"
+	"github.com/Kaffyn/Vectora/internal/policies"
+	"github.com/Kaffyn/Vectora/internal/tools"
 )
 
 // getLanguageName converts language code to full name

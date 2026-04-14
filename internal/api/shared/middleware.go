@@ -1,8 +1,8 @@
 package shared
 
 import (
-	"github.com/Kaffyn/Vectora/core/engine"
-	"github.com/Kaffyn/Vectora/core/policies"
+	"github.com/Kaffyn/Vectora/internal/engine"
+	"github.com/Kaffyn/Vectora/internal/policies"
 )
 
 // CoreDeps injeta as dependencias nativas limpas para todos os Transportes (JSON-RPC, gRPC)

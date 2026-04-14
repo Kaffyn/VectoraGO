@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Kaffyn/Vectora/core/infra"
+	"github.com/Kaffyn/Vectora/internal/infra"
 )
 
 // Manager handles Git operations for snapshots.

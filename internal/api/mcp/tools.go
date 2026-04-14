@@ -1,9 +1,9 @@
 package mcp
 
 import (
-	"github.com/Kaffyn/Vectora/core/llm"
-	"github.com/Kaffyn/Vectora/core/tools"
-	"github.com/Kaffyn/Vectora/core/tools/embedding"
+	"github.com/Kaffyn/Vectora/internal/llm"
+	"github.com/Kaffyn/Vectora/internal/tools"
+	"github.com/Kaffyn/Vectora/internal/tools/embedding"
 )
 
 // RegisterEmbeddingTools registers all embedding tools for MCP exposure.

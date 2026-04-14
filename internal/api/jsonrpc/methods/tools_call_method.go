@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/Kaffyn/Vectora/core/api/jsonrpc"
-	"github.com/Kaffyn/Vectora/core/api/shared"
+	"github.com/Kaffyn/Vectora/internal/api/jsonrpc"
+	"github.com/Kaffyn/Vectora/internal/api/shared"
 )
 
 // HandleToolsCall processes a tool call via the shared CoreDeps.

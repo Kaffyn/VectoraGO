@@ -10,13 +10,13 @@ import (
 	"os"
 	"sync"
 
-	"github.com/Kaffyn/Vectora/core/db"
-	"github.com/Kaffyn/Vectora/core/engine"
+	"github.com/Kaffyn/Vectora/internal/db"
+	"github.com/Kaffyn/Vectora/internal/engine"
 	"time"
 
-	"github.com/Kaffyn/Vectora/core/llm"
-	"github.com/Kaffyn/Vectora/core/policies"
-	"github.com/Kaffyn/Vectora/core/tools"
+	"github.com/Kaffyn/Vectora/internal/llm"
+	"github.com/Kaffyn/Vectora/internal/policies"
+	"github.com/Kaffyn/Vectora/internal/tools"
 )
 
 // StdioServer implements the Model Context Protocol (MCP) over stdin/stdout.

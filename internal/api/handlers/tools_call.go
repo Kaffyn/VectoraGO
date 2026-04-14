@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Kaffyn/Vectora/core/api/jsonrpc"
-	"github.com/Kaffyn/Vectora/core/engine"
+	"github.com/Kaffyn/Vectora/internal/api/jsonrpc"
+	"github.com/Kaffyn/Vectora/internal/engine"
 )
 
 // InitRequest represents the initialize params.

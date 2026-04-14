@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Kaffyn/Vectora/core/policies"
+	"github.com/Kaffyn/Vectora/internal/policies"
 )
 
 const MAX_READ_BYTES = 50 * 1024 // 50KB

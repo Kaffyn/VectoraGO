@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Kaffyn/Vectora/core/llm"
-	"github.com/Kaffyn/Vectora/core/policies"
+	"github.com/Kaffyn/Vectora/internal/llm"
+	"github.com/Kaffyn/Vectora/internal/policies"
 )
 
 type Indexer struct {

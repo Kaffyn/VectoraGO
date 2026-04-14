@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Kaffyn/Vectora/core/policies"
+	"github.com/Kaffyn/Vectora/internal/policies"
 )
 
 type EditTool struct {

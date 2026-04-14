@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Kaffyn/Vectora/core/crypto"
-	"github.com/Kaffyn/Vectora/core/db"
-	"github.com/Kaffyn/Vectora/core/engine"
-	"github.com/Kaffyn/Vectora/core/i18n"
-	"github.com/Kaffyn/Vectora/core/llm"
-	"github.com/Kaffyn/Vectora/core/manager"
-	"github.com/Kaffyn/Vectora/core/tray"
+	"github.com/Kaffyn/Vectora/internal/crypto"
+	"github.com/Kaffyn/Vectora/internal/db"
+	"github.com/Kaffyn/Vectora/internal/engine"
+	"github.com/Kaffyn/Vectora/internal/i18n"
+	"github.com/Kaffyn/Vectora/internal/llm"
+	"github.com/Kaffyn/Vectora/internal/manager"
+	"github.com/Kaffyn/Vectora/internal/tray"
 )
 
 type ProviderFetcher func() llm.Provider

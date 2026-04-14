@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/Kaffyn/Vectora/core/db"
-	"github.com/Kaffyn/Vectora/core/llm"
-	"github.com/Kaffyn/Vectora/core/tools"
+	"github.com/Kaffyn/Vectora/internal/db"
+	"github.com/Kaffyn/Vectora/internal/llm"
+	"github.com/Kaffyn/Vectora/internal/tools"
 )
 
 // WebSearchToEmbedTool searches the web and immediately vectorizes the results.

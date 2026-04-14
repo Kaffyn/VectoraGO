@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Kaffyn/Vectora/core/conversations"
+	"github.com/Kaffyn/Vectora/internal/conversations"
 )
 
 // convStore is the shared instance for the CLI process.

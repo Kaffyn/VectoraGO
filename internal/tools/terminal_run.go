@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Kaffyn/Vectora/core/infra"
+	"github.com/Kaffyn/Vectora/internal/infra"
 )
 
 const CMD_TIMEOUT = 30 * time.Second

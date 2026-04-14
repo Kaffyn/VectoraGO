@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Kaffyn/Vectora/core/policies"
+	"github.com/Kaffyn/Vectora/internal/policies"
 )
 
 type WriteFileTool struct {

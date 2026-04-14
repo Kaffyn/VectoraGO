@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Kaffyn/Vectora/core/api/ipc"
+	"github.com/Kaffyn/Vectora/internal/api/ipc"
 	"github.com/spf13/cobra"
 )
 

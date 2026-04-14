@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	vecos "github.com/Kaffyn/Vectora/core/os"
+	vecos "github.com/Kaffyn/Vectora/internal/os"
 	"github.com/spf13/cobra"
 )
 

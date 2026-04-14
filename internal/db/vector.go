@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	vecos "github.com/Kaffyn/Vectora/core/os"
+	vecos "github.com/Kaffyn/Vectora/internal/os"
 	"go.etcd.io/bbolt"
 )
 

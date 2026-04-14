@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/Kaffyn/Vectora/core/api/acp"
-	"github.com/Kaffyn/Vectora/core/api/mcp"
-	"github.com/Kaffyn/Vectora/core/db"
-	"github.com/Kaffyn/Vectora/core/llm"
+	"github.com/Kaffyn/Vectora/internal/api/acp"
+	"github.com/Kaffyn/Vectora/internal/api/mcp"
+	"github.com/Kaffyn/Vectora/internal/db"
+	"github.com/Kaffyn/Vectora/internal/llm"
 )
 
 // ProtocolMode defines which protocol mode Vectora is operating in.

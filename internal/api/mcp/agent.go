@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/Kaffyn/Vectora/core/db"
-	"github.com/Kaffyn/Vectora/core/llm"
+	"github.com/Kaffyn/Vectora/internal/db"
+	"github.com/Kaffyn/Vectora/internal/llm"
 )
 
 // VectoraMCPServer implementa o Vectora como um servidor MCP (Model Context Protocol).

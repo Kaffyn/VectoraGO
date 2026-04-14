@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Kaffyn/Vectora/core/telemetry"
+	"github.com/Kaffyn/Vectora/internal/telemetry"
 )
 
 // SetupLogger initializes the global structured logger with rotating file output.

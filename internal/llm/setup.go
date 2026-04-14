@@ -2,7 +2,7 @@ package llm
 
 import (
 	"context"
-	"github.com/Kaffyn/Vectora/core/infra"
+	"github.com/Kaffyn/Vectora/internal/infra"
 )
 
 // SetupRouter initializes a router with all available providers based on configuration.

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Kaffyn/Vectora/core/api/handlers"
-	"github.com/Kaffyn/Vectora/core/api/jsonrpc"
-	"github.com/Kaffyn/Vectora/core/engine"
+	"github.com/Kaffyn/Vectora/internal/api/handlers"
+	"github.com/Kaffyn/Vectora/internal/api/jsonrpc"
+	"github.com/Kaffyn/Vectora/internal/engine"
 )
 
 // Router manages the initialization of protocol servers.

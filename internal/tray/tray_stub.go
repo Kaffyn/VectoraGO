@@ -2,7 +2,7 @@
 
 package tray
 
-import "github.com/Kaffyn/Vectora/core/llm"
+import "github.com/Kaffyn/Vectora/internal/llm"
 
 var ActiveProvider llm.Provider
 var ActiveProviderID string
