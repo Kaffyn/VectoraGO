@@ -61,7 +61,7 @@ function Build-Binary {
     )
     $env:GOOS = $os
     $env:GOARCH = $arch
-    $env:CGO_ENABLED = "0"
+    $env:CGO_ENABLED = "1"
     $outputName = "${APP_NAME}-${os}-${arch}${ext}"
     $outputPath = Join-Path $BIN_DIR $outputName
     Write-Host ("  Building {0,-30} ..." -f $outputName) -NoNewline

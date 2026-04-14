@@ -58,14 +58,17 @@ jobs:
           cache: "npm"
           cache-dependency-path: "**/package-lock.json"
 
-      - name: Build Vectora CLI
+      - name: Install CGO dependencies (Linux)
+        if: runner.os == 'Linux'
         run: |
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            powershell -File build-quick.ps1
-          else
-            go build -v -o bin/vectora ./cmd/core
-          fi
-        shell: bash
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu build-essential
+
+      - name: Build Vectora CLI
+        shell: pwsh
+        run: ./build.ps1
+        env:
+          CGO_ENABLED: 1
 
       - name: Verify Vectora binary
         run: |

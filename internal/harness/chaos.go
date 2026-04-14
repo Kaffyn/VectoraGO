@@ -1,4 +1,4 @@
-package chaos
+package harness
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Kaffyn/Vectora/internal/harness"
 	"github.com/Kaffyn/Vectora/internal/tools"
 )
 
@@ -24,13 +23,13 @@ const (
 // It is the "Chaos Monkey" described in the Sprint plan.
 type ChaosWrapper struct {
 	inner    tools.Tool
-	config   harness.FaultInjection
+	config   FaultInjection
 	rng      *rand.Rand
 	injected int // count of injections triggered
 }
 
 // NewChaosWrapper creates a fault-injecting wrapper around a real tool.
-func NewChaosWrapper(inner tools.Tool, config harness.FaultInjection) *ChaosWrapper {
+func NewChaosWrapper(inner tools.Tool, config FaultInjection) *ChaosWrapper {
 	return &ChaosWrapper{
 		inner:  inner,
 		config: config,
@@ -115,7 +114,7 @@ func (c *ChaosWrapper) InjectionCount() int {
 
 // WrapRegistry wraps all target tools in a Registry with Chaos wrappers.
 // Returns a map from tool name to its ChaosWrapper for metrics collection.
-func WrapRegistry(toolMap map[string]tools.Tool, config harness.FaultInjection) map[string]*ChaosWrapper {
+func WrapRegistry(toolMap map[string]tools.Tool, config FaultInjection) map[string]*ChaosWrapper {
 	wrappers := make(map[string]*ChaosWrapper)
 	if !config.Enabled {
 		return wrappers

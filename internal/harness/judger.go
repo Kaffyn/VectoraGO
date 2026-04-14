@@ -1,4 +1,4 @@
-package evaluation
+package harness
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Kaffyn/Vectora/internal/harness"
 	"github.com/Kaffyn/Vectora/internal/llm"
 )
 
@@ -40,11 +39,11 @@ Return a JSON object with this exact structure:
 // It is the "LLM-as-a-Judge" implementation for the Vectora Harness.
 type Judger struct {
 	llmRouter *llm.Router
-	config    harness.JudgeConfig
+	config    JudgeConfig
 }
 
 // NewJudger creates a new Judger instance.
-func NewJudger(router *llm.Router, config harness.JudgeConfig) *Judger {
+func NewJudger(router *llm.Router, config JudgeConfig) *Judger {
 	return &Judger{
 		llmRouter: router,
 		config:    config,
@@ -53,7 +52,7 @@ func NewJudger(router *llm.Router, config harness.JudgeConfig) *Judger {
 
 // Evaluate runs the LLM Judge on the agent's output and returns a JudgeVerdict.
 // task describes what was asked, agentOutput is the full agent response.
-func (j *Judger) Evaluate(ctx context.Context, task, agentOutput string) (*harness.JudgeVerdict, error) {
+func (j *Judger) Evaluate(ctx context.Context, task, agentOutput string) (*JudgeVerdict, error) {
 	if j.config.Method == "deterministic" || j.config.Method == "" {
 		// Fallback: simple length + pattern heuristic (no LLM cost)
 		return j.deterministicEval(agentOutput), nil
@@ -89,14 +88,14 @@ func (j *Judger) Evaluate(ctx context.Context, task, agentOutput string) (*harne
 }
 
 // parseVerdict extracts a JudgeVerdict from the LLM response.
-func (j *Judger) parseVerdict(raw string) (*harness.JudgeVerdict, error) {
+func (j *Judger) parseVerdict(raw string) (*JudgeVerdict, error) {
 	// Strip markdown code fences if present
 	raw = strings.TrimSpace(raw)
 	raw = strings.TrimPrefix(raw, "```json")
 	raw = strings.TrimSuffix(raw, "```")
 	raw = strings.TrimSpace(raw)
 
-	var verdict harness.JudgeVerdict
+	var verdict JudgeVerdict
 	if err := json.Unmarshal([]byte(raw), &verdict); err != nil {
 		return nil, fmt.Errorf("failed to parse judge verdict JSON: %w\nRaw: %s", err, raw)
 	}
@@ -106,7 +105,7 @@ func (j *Judger) parseVerdict(raw string) (*harness.JudgeVerdict, error) {
 
 // deterministicEval is a fast heuristic judge that doesn't consume LLM tokens.
 // Used for P0 tests, pre-commit hooks, or when method == "deterministic".
-func (j *Judger) deterministicEval(agentOutput string) *harness.JudgeVerdict {
+func (j *Judger) deterministicEval(agentOutput string) *JudgeVerdict {
 	score := float32(0.7) // baseline "reasonable" score
 
 	// Penalize if output contains suspicious patterns
@@ -135,7 +134,7 @@ func (j *Judger) deterministicEval(agentOutput string) *harness.JudgeVerdict {
 		score = 0.0
 	}
 
-	return &harness.JudgeVerdict{
+	return &JudgeVerdict{
 		Score: score,
 		Dimensions: map[string]float32{
 			"deterministic_heuristics": score,
