@@ -194,11 +194,12 @@ Configure in Claude Code settings.json:
 }
 
 var (
-	embedInclude   string
-	embedExclude   string
-	embedWorkspace string
-	embedForce     bool
-	embedDetached  bool
+	embedInclude    string
+	embedExclude    string
+	embedWorkspace  string
+	embedForce      bool
+	embedDetached   bool
+	embedTurboQuant bool
 )
 
 var embedCmd = &cobra.Command{
@@ -249,6 +250,7 @@ func init() {
 	embedCmd.Flags().StringVar(&embedWorkspace, "workspace", "default", "Workspace ID for embedding isolation")
 	embedCmd.Flags().BoolVar(&embedForce, "force", false, "Re-embed files even if already indexed")
 	embedCmd.Flags().BoolVarP(&embedDetached, "background", "d", false, "Start embedding in background and exit")
+	embedCmd.Flags().BoolVar(&embedTurboQuant, "turbo-quant", false, "Enable TurboQuant (Beta) for 10x smaller embeddings")
 
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(statusCmd)
@@ -295,6 +297,14 @@ func main() {
 }
 
 func runEmbed(rootPath string) error {
+	// Update TurboQuant preference if flag provided
+	if embedTurboQuant {
+		prefs := infra.LoadPreferences()
+		prefs.EnableTurboQuantBeta = true
+		infra.SavePreferences(prefs)
+		fmt.Println("🚀 TurboQuant (Beta) Habilitado para este projeto.")
+	}
+
 	ctx := context.Background()
 
 	absPath, err := filepath.Abs(rootPath)

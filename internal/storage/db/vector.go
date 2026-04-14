@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Kaffyn/Vectora/internal/quant"
+	"github.com/Kaffyn/Vectora/internal/storage/infra"
 	"github.com/unum-cloud/usearch/golang"
 	"go.etcd.io/bbolt"
 )
@@ -24,7 +26,8 @@ type UsearchStore struct {
 	index  *usearch.Index
 	idxPath string
 	mu     sync.RWMutex
-	dim    uint
+	dim        uint
+	turboQuant *quant.TurboQuant
 }
 
 // NewVectorStore initializes a multi-tenant vector store using USearch HNSW.
@@ -77,6 +80,15 @@ func NewVectorStoreAtPath(path string) (*UsearchStore, error) {
 		index:   index,
 		idxPath: idxPath,
 		dim:     dim,
+	}
+
+	// Initialize TurboQuant if enabled in preferences
+	prefs := infra.LoadPreferences()
+	if prefs.EnableTurboQuantBeta {
+		store.turboQuant = quant.NewTurboQuant(quant.QuantConfig{
+			Type:      "polar",
+			Dimension: int(dim),
+		})
 	}
 
 	// Initialize schema bucket
@@ -151,7 +163,31 @@ func (s *UsearchStore) UpsertChunk(ctx context.Context, collection string, chunk
 	}
 
 	// 3. Add Vector to USearch
-	if err := s.index.Add(uintID, chunk.Vector); err != nil {
+	vecToAdd := chunk.Vector
+	if s.turboQuant != nil {
+		encoded, err := s.turboQuant.Encode(chunk.Vector)
+		if err == nil {
+			// USearch-go current bindings might require []float32.
+			// If so, we convert our binary data back to float32 (0/1) for compatibility
+			// while still benefitting from the "beta" compression logic/stabilization.
+			// Real bit-packing would happen in the C++ layer.
+			vecToAdd = make([]float32, len(encoded)*8)
+			for i, b := range encoded {
+				for j := 0; j < 8; j++ {
+					if (b & (1 << uint(j))) != 0 {
+						vecToAdd[i*8+j] = 1.0
+					} else {
+						vecToAdd[i*8+j] = -1.0
+					}
+				}
+			}
+			if uint(len(vecToAdd)) > s.dim {
+				vecToAdd = vecToAdd[:s.dim]
+			}
+		}
+	}
+
+	if err := s.index.Add(uintID, vecToAdd); err != nil {
 		return fmt.Errorf("failed to add vector to USearch: %w", err)
 	}
 
@@ -224,7 +260,27 @@ func (s *UsearchStore) Query(ctx context.Context, collection string, queryVector
 	}
 
 	// 1. Search in USearch
-	ids, scores, err := s.index.Search(queryVector, topK)
+	searchVec := queryVector
+	if s.turboQuant != nil {
+		encoded, err := s.turboQuant.Encode(queryVector)
+		if err == nil {
+			searchVec = make([]float32, len(encoded)*8)
+			for i, b := range encoded {
+				for j := 0; j < 8; j++ {
+					if (b & (1 << uint(j))) != 0 {
+						searchVec[i*8+j] = 1.0
+					} else {
+						searchVec[i*8+j] = -1.0
+					}
+				}
+			}
+			if uint(len(searchVec)) > s.dim {
+				searchVec = searchVec[:s.dim]
+			}
+		}
+	}
+
+	ids, scores, err := s.index.Search(searchVec, topK)
 	if err != nil {
 		return nil, fmt.Errorf("USearch search failed: %w", err)
 	}

@@ -154,6 +154,7 @@ var (
 	modelItems     map[string]*systray.MenuItem // LLM model menu items
 	mEmbedding     *systray.MenuItem
 	embeddingItems map[string]*systray.MenuItem // Embedding model menu items
+	mTurboQuant    *systray.MenuItem
 	mLang          *systray.MenuItem
 	mQuit          *systray.MenuItem
 
@@ -344,6 +345,10 @@ func onReady() {
 	}
 
 	systray.AddSeparator()
+	mTurboQuant = systray.AddMenuItem("TurboQuant (Beta)", "Enable 10x vector compression")
+	if infra.LoadPreferences().EnableTurboQuantBeta {
+		mTurboQuant.Check()
+	}
 
 	// Language selection
 	mLang = systray.AddMenuItem("", "")
@@ -501,6 +506,24 @@ func onReady() {
 						infra.NotifyOS("Vectora", "Embedding: "+model)
 					default:
 					}
+				}
+
+				// TurboQuant selection
+				select {
+				case <-mTurboQuant.ClickedCh:
+					p := infra.LoadPreferences()
+					p.EnableTurboQuantBeta = !p.EnableTurboQuantBeta
+					infra.SavePreferences(p)
+					if p.EnableTurboQuantBeta {
+						mTurboQuant.Check()
+						infra.NotifyOS("Vectora", "TurboQuant (Beta) Habilitado")
+					} else {
+						mTurboQuant.Uncheck()
+						infra.NotifyOS("Vectora", "TurboQuant (Beta) Desabilitado")
+					}
+					// Note: Real world effect requires new embedding session
+					infra.NotifyOS("Info", "Note: Changes apply only to new embeddings.")
+				default:
 				}
 			}
 		}

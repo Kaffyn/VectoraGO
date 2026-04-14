@@ -15,6 +15,7 @@ type UserPreferences struct {
 	Language             string `json:"language"`
 	Theme                string `json:"theme"`
 	LastWorkspace        string `json:"last_workspace"`
+	EnableTurboQuantBeta bool   `json:"enable_turbo_quant_beta"`
 }
 
 var (
